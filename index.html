@@ -534,7 +534,30 @@
     <div id="toast-container" class="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 pointer-events-none"></div>
 
     <script>
-        const DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1Q1UookTiNMp58gxazcvHkDt38KDZMZ8q/export?format=csv';
+        const DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1Q1UookTiNMp58gxazcvHkDt38KDZMZ8q/export?format=xlsx';
+
+        /* Scans every cell of a worksheet and returns, per data row (0-indexed after the
+           header row), any real hyperlink targets found anywhere in that row. This recovers
+           links that were added as clickable "Insert > Link" text rather than typed as a
+           plain URL — those survive in real .xlsx binaries but are silently dropped by CSV export. */
+        function extractRowHyperlinks(worksheet) {
+            const rowLinks = [];
+            if (!worksheet['!ref']) return rowLinks;
+            const range = XLSX.utils.decode_range(worksheet['!ref']);
+            const headerRowIndex = range.s.r;
+            for (let r = headerRowIndex + 1; r <= range.e.r; r++) {
+                const linksInRow = [];
+                for (let c = range.s.c; c <= range.e.c; c++) {
+                    const cellRef = XLSX.utils.encode_cell({ r, c });
+                    const cell = worksheet[cellRef];
+                    if (cell && cell.l && cell.l.Target) {
+                        linksInRow.push(cell.l.Target);
+                    }
+                }
+                rowLinks.push(linksInRow);
+            }
+            return rowLinks;
+        }
 
         /* Forces the resource link to open in a real, independent new browser tab
            instead of being intercepted/rewritten by a hosting page's embedded iframe. */
@@ -615,8 +638,9 @@
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheetName];
                     const jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                    const rowLinks = extractRowHyperlinks(worksheet);
 
-                    processImportedRows(jsonRows);
+                    processImportedRows(jsonRows, rowLinks);
                 } catch (err) {
                     showImportStatus('<i class="fa-solid fa-circle-exclamation mr-1"></i> Սխալ Excel ֆայլը կարդալիս: ' + err.message, false);
                 }
@@ -632,12 +656,15 @@
                 return;
             }
 
-            // Convert Google Sheets edit URL to CSV export format automatically if needed
+            // Convert Google Sheets edit URL to XLSX export format automatically if needed
             if (url.includes('docs.google.com/spreadsheets') && !url.includes('/export')) {
                 const sheetIdMatch = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
                 if (sheetIdMatch && sheetIdMatch[1]) {
-                    url = `https://docs.google.com/spreadsheets/d/${sheetIdMatch[1]}/export?format=csv`;
+                    url = `https://docs.google.com/spreadsheets/d/${sheetIdMatch[1]}/export?format=xlsx`;
                 }
+            } else if (url.includes('docs.google.com/spreadsheets') && url.includes('format=csv')) {
+                // Upgrade a CSV export link to XLSX so hyperlinks aren't silently dropped
+                url = url.replace('format=csv', 'format=xlsx');
             }
 
             showImportStatus('<i class="fa-solid fa-spinner fa-spin mr-1"></i> Ներբեռնվում է Google Drive/Sheets տվյալները...');
@@ -645,14 +672,15 @@
             try {
                 const response = await fetch(url);
                 if (!response.ok) throw new Error('Չհաջողվեց ներբեռնել (կարգավորեք Drive հղումը որպես "Anyone with the link can view")');
-                
-                const csvText = await response.text();
-                const workbook = XLSX.read(csvText, { type: 'string' });
+
+                const arrayBuffer = await response.arrayBuffer();
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
                 const jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                const rowLinks = extractRowHyperlinks(worksheet);
 
-                processImportedRows(jsonRows);
+                processImportedRows(jsonRows, rowLinks);
             } catch (err) {
                 showImportStatus('<i class="fa-solid fa-circle-exclamation mr-1"></i> ' + err.message, false);
             }
@@ -670,24 +698,56 @@
             return Math.abs(hash).toString(36);
         }
 
-        function processImportedRows(rows) {
+        /* Builds a lowercase-trimmed key map so header names like " Link", "LINK", "Link " all match */
+        function normalizeRowKeys(row) {
+            const normalized = {};
+            Object.keys(row).forEach(k => {
+                normalized[k.trim().toLowerCase()] = row[k];
+            });
+            return normalized;
+        }
+
+        /* Looks up the first non-empty value among several possible header-name spellings */
+        function getField(normRow, candidates, fallback) {
+            for (const c of candidates) {
+                const v = normRow[c.trim().toLowerCase()];
+                if (v !== undefined && v !== null && String(v).trim() !== '') {
+                    return typeof v === 'string' ? v.trim() : v;
+                }
+            }
+            return fallback;
+        }
+
+        function processImportedRows(rows, rowLinks) {
             if (!rows || rows.length === 0) {
                 showImportStatus('Ֆայլը դատարկ է կամ տվյալներ չեն գտնվել։', false);
                 return;
             }
 
             let addedCount = 0;
-            rows.forEach((row, idx) => {
-                // Find matching values regardless of exact column casing/naming
-                const title = row['Վերնագիր'] || row['title'] || row['Title'] || row['Name'] || row['Անվանում'] || '';
-                if (!title) return;
+            let skippedNoTitle = 0;
 
-                const author = row['Հեղինակ'] || row['author'] || row['Author'] || 'Անհայտ';
-                const link = row['Հղում'] || row['link'] || row['Link'] || row['URL'] || '#';
-                const domain = row['Ոլորտ'] || row['domain'] || row['Domain'] || row['Կատեգորիա'] || 'Տեղեկատվական տեխնոլոգիաներ';
-                const type = row['Տեսակ'] || row['type'] || row['Type'] || row['Ձևաչափ'] || 'գիրք';
-                const description = row['Նկարագրություն'] || row['description'] || row['Description'] || 'Ներմուծված ուսումնական նյութ։';
-                const tagsRaw = row['Թեգեր'] || row['tags'] || row['Tags'] || '';
+            rows.forEach((row, idx) => {
+                const normRow = normalizeRowKeys(row);
+
+                // Find matching values regardless of exact column casing/spacing/naming
+                const title = getField(normRow, ['Վերնագիր', 'title', 'name', 'անվանում'], '');
+                if (!title) { skippedNoTitle++; return; }
+
+                const author = getField(normRow, ['Հեղինակ', 'author'], 'Անհայտ');
+                let link = getField(normRow, ['Հղում', 'link', 'url'], '');
+                const domain = getField(normRow, ['Ոլորտ', 'domain', 'կատեգորիա'], 'Տեղեկատվական տեխնոլոգիաներ');
+                const type = getField(normRow, ['Տեսակ', 'type', 'ձևաչափ'], 'գիրք');
+                const description = getField(normRow, ['Նկարագրություն', 'description'], 'Ներմուծված ուսումնական նյութ։');
+                const tagsRaw = getField(normRow, ['Թեգեր', 'tags'], '');
+
+                // If no plain-text URL was found, fall back to a real hyperlink found anywhere
+                // in this row (covers rows where the link was added via "Insert > Link" on the
+                // title or another cell, instead of typed as plain text in the URL column).
+                if (!link && rowLinks && rowLinks[idx] && rowLinks[idx].length > 0) {
+                    link = rowLinks[idx][0];
+                }
+                if (!link) link = '#';
 
                 const tags = typeof tagsRaw === 'string' && tagsRaw ? tagsRaw.split(/[,;]/).map(t => t.trim()).filter(Boolean) : ['Excel'];
 
@@ -735,9 +795,15 @@
                 renderTagPills();
                 applyFilters();
                 renderDomainsTab();
-                showImportStatus(`<i class="fa-solid fa-circle-check mr-1"></i> Հաջողությամբ ավելացվեց ${addedCount} նոր ռեսուրս Excel/Drive-ից:`, true);
+                let msg = `<i class="fa-solid fa-circle-check mr-1"></i> Հաջողությամբ ավելացվեց ${addedCount} նոր ռեսուրս Excel/Drive-ից:`;
+                if (skippedNoTitle > 0) {
+                    msg += ` (${skippedNoTitle} տող բաց թողնվեց՝ առանց Վերնագիր/Title սյունակի արժեքի)`;
+                }
+                showImportStatus(msg, true);
                 showToast(`${addedCount} նյութ հաջողությամբ ներմուծվեց:`);
                 setTimeout(() => closeImportModal(), 1800);
+            } else if (skippedNoTitle > 0) {
+                showImportStatus(`Ոչ մի տող չներմուծվեց․ ${skippedNoTitle} տողում բացակայում է «Վերնագիր»/«Title» սյունակի արժեքը։`, false);
             } else {
                 showImportStatus('Չհաջողվեց ճանաչել սյունակները։ Համոզվեք, որ Excel-ում կա «Վերնագիր» կամ «Title» սյունակ։', false);
             }
@@ -1252,15 +1318,16 @@
             try {
                 const response = await fetch(DEFAULT_SHEET_URL);
                 if (!response.ok) throw new Error('Հնարավոր չէ ներբեռնել Google Sheet-ը։ Համոզվեք, որ Google Sheet-ը ունի «Anyone with link can view» հասանելիություն։');
-                
-                const csvText = await response.text();
-                const workbook = XLSX.read(csvText, { type: 'string' });
+
+                const arrayBuffer = await response.arrayBuffer();
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
                 const firstSheetName = workbook.SheetNames[0];
                 const worksheet = workbook.Sheets[firstSheetName];
                 const jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                const rowLinks = extractRowHyperlinks(worksheet);
 
                 if (jsonRows && jsonRows.length > 0) {
-                    processImportedRows(jsonRows);
+                    processImportedRows(jsonRows, rowLinks);
                     if (!quiet) {
                         showImportStatus('<i class="fa-solid fa-circle-check mr-1"></i> Հաջողությամբ սինքրոնացվեց Google Sheet-ի հետ։', true);
                         showToast('Տվյալները սինքրոնացվեցին Google Sheet-ի հետ:');
