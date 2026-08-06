@@ -337,17 +337,26 @@
                 </div>
 
                 <!-- Direct Access Button Card -->
-                <div id="modal-link-box" class="p-5 rounded-xl bg-gradient-to-r from-amber-950/50 via-slate-900 to-slate-950 border border-gold-500/30 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
-                    <div>
-                        <h4 class="text-sm font-bold text-amber-300 flex items-center">
-                            <i class="fa-solid fa-cloud-arrow-down mr-2 text-gold-400"></i> Ռեսուրսի Անմիջական Հղում
-                        </h4>
-                        <p class="text-xs text-slate-400 mt-1">Բացեք կամ ներբեռնեք ֆայլը/տեսանյութը Proton Drive-ից կամ YouTube-ից։</p>
+                <div id="modal-link-box" class="p-5 rounded-xl bg-gradient-to-r from-amber-950/50 via-slate-900 to-slate-950 border border-gold-500/30 flex flex-col gap-4 shadow-lg">
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div>
+                            <h4 class="text-sm font-bold text-amber-300 flex items-center">
+                                <i class="fa-solid fa-cloud-arrow-down mr-2 text-gold-400"></i> Ռեսուրսի Անմիջական Հղում
+                            </h4>
+                            <p class="text-xs text-slate-400 mt-1">Բացեք կամ ներբեռնեք ֆայլը/տեսանյութը Proton Drive-ից կամ YouTube-ից։</p>
+                        </div>
+                        <a id="modal-open-link-btn" href="#" target="_blank" rel="noopener noreferrer" onclick="return handleResourceLinkClick(event, this.href)" class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-gold-500 to-amber-600 hover:from-gold-400 hover:to-amber-500 text-slate-950 font-bold text-sm shadow-lg shadow-gold-500/20 transition-all flex items-center justify-center space-x-2 shrink-0">
+                            <span>Բացել Ռեսուրսը</span>
+                            <i class="fa-solid fa-up-right-from-square text-xs"></i>
+                        </a>
                     </div>
-                    <a id="modal-open-link-btn" href="#" target="_blank" rel="noopener noreferrer" onclick="return handleResourceLinkClick(event, this.href)" class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-gold-500 to-amber-600 hover:from-gold-400 hover:to-amber-500 text-slate-950 font-bold text-sm shadow-lg shadow-gold-500/20 transition-all flex items-center justify-center space-x-2 shrink-0">
-                        <span>Բացել Ռեսուրսը</span>
-                        <i class="fa-solid fa-up-right-from-square text-xs"></i>
-                    </a>
+                    <div class="flex items-center gap-2 bg-slate-950/70 border border-slate-800 rounded-lg px-3 py-2">
+                        <i class="fa-solid fa-link text-slate-500 text-xs shrink-0"></i>
+                        <span id="modal-item-url-text" class="text-xs text-slate-300 font-mono truncate flex-1"></span>
+                        <button onclick="copyModalLink()" title="Պատճենել հղումը" class="shrink-0 p-1.5 rounded-md hover:bg-slate-800 text-slate-400 hover:text-gold-400 transition-colors">
+                            <i class="fa-regular fa-copy text-xs"></i>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Description -->
@@ -650,6 +659,17 @@
         }
 
         /* Flexible row parser mapping various column name synonyms */
+        /* Deterministic short hash so the same imported row always gets the same ID,
+           across page reloads and re-syncs — this is what makes bookmarks persist. */
+        function stableHash(str) {
+            let hash = 5381;
+            for (let i = 0; i < str.length; i++) {
+                hash = ((hash << 5) + hash) + str.charCodeAt(i);
+                hash = hash & hash;
+            }
+            return Math.abs(hash).toString(36);
+        }
+
         function processImportedRows(rows) {
             if (!rows || rows.length === 0) {
                 showImportStatus('Ֆայլը դատարկ է կամ տվյալներ չեն գտնվել։', false);
@@ -684,8 +704,10 @@
                     });
                 }
 
-                materialsData.unshift({
-                    id: `ALX-IMP-${Date.now()}-${idx}`,
+                const stableId = `ALX-IMP-${stableHash(title + '|' + link)}`;
+                const existingIdx = materialsData.findIndex(m => m.id === stableId);
+                const newItem = {
+                    id: stableId,
                     title,
                     author,
                     link,
@@ -696,7 +718,13 @@
                     description,
                     tags,
                     bgAccent: 'from-emerald-950/30 to-slate-900/90'
-                });
+                };
+
+                if (existingIdx >= 0) {
+                    materialsData[existingIdx] = newItem;
+                } else {
+                    materialsData.unshift(newItem);
+                }
 
                 addedCount++;
             });
@@ -1511,6 +1539,16 @@
             applyFilters();
         }
 
+        function copyModalLink() {
+            const item = materialsData.find(m => m.id === currentModalItemId);
+            if (!item || !item.link) return;
+            navigator.clipboard.writeText(item.link).then(() => {
+                showToast('Հղումը պատճենվեց:');
+            }).catch(() => {
+                showToast('Չհաջողվեց պատճենել հղումը:');
+            });
+        }
+
         function openDetailModal(id) {
             const item = materialsData.find(m => m.id === id);
             if (!item) return;
@@ -1528,6 +1566,7 @@
 
             const linkBtn = document.getElementById('modal-open-link-btn');
             linkBtn.href = item.link || '#';
+            document.getElementById('modal-item-url-text').textContent = item.link || 'Հղում առկա չէ';
 
             const tagsContainer = document.getElementById('modal-item-tags');
             tagsContainer.innerHTML = '';
