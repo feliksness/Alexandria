@@ -1,0 +1,1699 @@
+<!DOCTYPE html>
+<html lang="hy" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ալեքսանդրիայի Գրադարան | Թվային Ակադեմիական Արխիվ</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gold: {
+                            50: '#fffbeb',
+                            100: '#fef3c7',
+                            200: '#fde68a',
+                            300: '#fcd34d',
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                            700: '#b45309',
+                            800: '#92400e',
+                            900: '#78350f',
+                        },
+                        alexandria: {
+                            bg: '#0a0d14',
+                            card: '#121824',
+                            cardBorder: '#232d42',
+                            papyrus: '#f7f1e3',
+                            papyrusDark: '#2a2218'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        serif: ['Georgia', 'Cambria', 'serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Google Fonts & FontAwesome Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Serif+Armenian:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- SheetJS CDN for parsing XLSX / CSV files directly in browser -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Serif Armenian', sans-serif;
+            background-color: #0a0d14;
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d97706;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #f59e0b;
+        }
+
+        /* Papyrus Pattern */
+        .papyrus-pattern {
+            background-image: radial-gradient(#d97706 0.75px, transparent 0.75px), radial-gradient(#d97706 0.75px, #0a0d14 0.75px);
+            background-size: 30px 30px;
+            background-position: 0 0, 15px 15px;
+            opacity: 0.15;
+        }
+
+        /* Golden Glass Effect */
+        .gold-glass {
+            background: rgba(18, 24, 36, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(217, 119, 6, 0.2);
+        }
+
+        .gold-glass:hover {
+            border-color: rgba(245, 158, 11, 0.5);
+            box-shadow: 0 0 20px rgba(217, 119, 6, 0.15);
+        }
+
+        /* Bento Grid Layout Spans */
+        .bento-tall {
+            grid-row: span 2 / span 2;
+        }
+        .bento-wide {
+            grid-column: span 2 / span 2;
+        }
+        .bento-featured {
+            grid-column: span 2 / span 2;
+            grid-row: span 2 / span 2;
+        }
+
+        @media (max-width: 768px) {
+            .bento-tall, .bento-wide, .bento-featured {
+                grid-column: span 1 / span 1 !important;
+                grid-row: span 1 / span 1 !important;
+            }
+        }
+        
+        /* Toast Animation */
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .toast-enter {
+            animation: slideInRight 0.3s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col relative antialiased selection:bg-gold-500 selection:text-slate-950">
+
+    <div class="fixed inset-0 papyrus-pattern pointer-events-none z-0"></div>
+    <div class="fixed -top-40 -left-40 w-96 h-96 bg-gold-600/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="fixed top-1/2 -right-40 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+    <header class="sticky top-0 z-40 w-full gold-glass border-b border-amber-900/30 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            
+            <!-- Logo & Title -->
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('materials')">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-gold-500 to-amber-700 p-0.5 shadow-lg shadow-gold-600/20 flex items-center justify-center">
+                    <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center text-gold-400">
+                        <i class="fa-solid fa-graduation-cap text-2xl"></i>
+                    </div>
+                </div>
+                <div>
+                    <h1 class="text-xl sm:text-2xl font-bold bg-gradient-to-r from-gold-200 via-gold-400 to-amber-500 bg-clip-text text-transparent tracking-wide font-serif">
+                        ԱԼԵՔՍԱՆԴՐԻԱ
+                    </h1>
+                    <p class="text-xs text-amber-400/80 tracking-widest uppercase font-sans">Ակադեմիական Թվային Պահոց</p>
+                </div>
+            </div>
+
+            <!-- Global Actions -->
+            <div class="flex items-center space-x-2 sm:space-x-4">
+                
+                <button onclick="toggleBookmarksDrawer()" class="relative p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-300 hover:text-gold-400 hover:border-gold-500/40 transition-all">
+                    <i class="fa-solid fa-bookmark text-lg"></i>
+                    <span id="bookmark-badge" class="absolute -top-1 -right-1 w-5 h-5 bg-gold-500 text-slate-950 text-xs font-bold rounded-full flex items-center justify-center hidden">0</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <section class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
+        <div class="relative rounded-2xl p-6 sm:p-8 overflow-hidden bg-gradient-to-r from-slate-900/95 via-slate-900/80 to-amber-950/50 border border-gold-500/20 shadow-2xl">
+            <div class="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                <div class="max-w-2xl">
+                    <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-gold-500/10 border border-gold-500/30 text-gold-400 text-xs font-semibold uppercase tracking-wider mb-3">
+                        <i class="fa-solid fa-book-bookmark"></i>
+                        <span>Ուսումնական & Ակադեմիական Բազա</span>
+                    </div>
+                    <h2 class="text-2xl sm:text-4xl font-serif font-bold text-slate-100 leading-tight">
+                        Ուսումնական նյութերի, դասագրքերի և տեսադասընթացների հարթակ
+                    </h2>
+                    <p class="mt-2 text-slate-400 text-sm sm:text-base">
+                        Բարձրագույն մաթեմատիկայի, տնտեսագիտության, մենեջմենթի, հոգեբանության, ՏՏ և հարակից ոլորտների թվայնացված գրականություն և հղումներ։
+                    </p>
+                </div>
+
+                <!-- Stats Counters -->
+                <div class="grid grid-cols-3 gap-3 sm:gap-4 shrink-0">
+                    <div class="p-3 sm:p-4 rounded-xl bg-slate-950/70 border border-slate-800 text-center">
+                        <div id="stat-total-items" class="text-2xl sm:text-3xl font-bold text-gold-400 font-serif">0</div>
+                        <div class="text-[11px] sm:text-xs text-slate-400 mt-1">Բոլոր Նյութերը</div>
+                    </div>
+                    <div class="p-3 sm:p-4 rounded-xl bg-slate-950/70 border border-slate-800 text-center">
+                        <div id="stat-total-domains" class="text-2xl sm:text-3xl font-bold text-amber-400 font-serif">0</div>
+                        <div class="text-[11px] sm:text-xs text-slate-400 mt-1">Ոլորտներ</div>
+                    </div>
+                    <div class="p-3 sm:p-4 rounded-xl bg-slate-950/70 border border-slate-800 text-center">
+                        <div id="stat-books-count" class="text-2xl sm:text-3xl font-bold text-yellow-500 font-serif">0</div>
+                        <div class="text-[11px] sm:text-xs text-slate-400 mt-1">Դասագրքեր</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <main class="relative z-10 flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+        
+        <!-- Navigation Tabs -->
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-6 border-b border-slate-800 pb-4">
+            <div class="flex items-center space-x-2 bg-slate-900/90 p-1.5 rounded-xl border border-slate-800">
+                <button id="tab-materials" onclick="switchTab('materials')" class="flex items-center space-x-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all bg-gold-600 text-slate-950 shadow-md">
+                    <i class="fa-solid fa-layer-group"></i>
+                    <span>Բոլոր Նյութերը</span>
+                </button>
+                <button id="tab-domains" onclick="switchTab('domains')" class="flex items-center space-x-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+                    <i class="fa-solid fa-shapes"></i>
+                    <span>Ոլորտներ</span>
+                </button>
+            </div>
+
+            <div class="text-xs text-slate-400 flex items-center space-x-2">
+                <span>Գտնված է՝</span>
+                <span id="filtered-count-badge" class="px-2.5 py-1 rounded-md bg-gold-500/20 text-gold-300 font-bold">0 նյութ</span>
+            </div>
+        </div>
+
+        <!-- Search & Filter Bar -->
+        <div id="filter-controls-container" class="space-y-4 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+                
+                <!-- Search Box -->
+                <div class="md:col-span-5 relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-500"></i>
+                    <input type="text" id="search-input" oninput="handleSearchInput()" placeholder="Որոնել անվանումով, հեղինակով, թեմայով..." class="w-full pl-11 pr-4 py-3 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500 text-sm transition-all">
+                </div>
+
+                <!-- Select Domain Filter -->
+                <div class="md:col-span-3">
+                    <select id="domain-filter" onchange="applyFilters()" class="w-full px-4 py-3 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-gold-500 transition-all cursor-pointer">
+                        <option value="ALL">Բոլոր Ոլորտները</option>
+                    </select>
+                </div>
+
+                <!-- Select Format Filter -->
+                <div class="md:col-span-2">
+                    <select id="type-filter" onchange="applyFilters()" class="w-full px-4 py-3 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-gold-500 transition-all cursor-pointer">
+                        <option value="ALL">Բոլոր Ձևաչափերը</option>
+                        <option value="գիրք">Գիրք / Դասագիրք</option>
+                        <option value="նյութ">Ուսումնական նյութ</option>
+                        <option value="տեսանյութ">Տեսանյութ / Տեսադաս</option>
+                    </select>
+                </div>
+
+                <!-- Sort Filter -->
+                <div class="md:col-span-2">
+                    <select id="sort-filter" onchange="applyFilters()" class="w-full px-4 py-3 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-200 text-sm focus:outline-none focus:border-gold-500 transition-all cursor-pointer">
+                        <option value="NEWEST">Վերջին ավելացված</option>
+                        <option value="TITLE_ASC">Անվանումով (Ա-Ֆ)</option>
+                        <option value="RATING_DESC">Ըստ վարկանիշի</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Tags Selector -->
+            <div class="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none text-xs">
+                <span class="text-slate-500 shrink-0 font-medium mr-1"><i class="fa-solid fa-tags mr-1"></i>Թեգեր՝</span>
+                <div id="tags-pills-container" class="flex items-center space-x-2 shrink-0"></div>
+                <button id="reset-filters-btn" onclick="resetAllFilters()" class="hidden px-3 py-1 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs shrink-0 transition-all ml-auto">
+                    <i class="fa-solid fa-xmark mr-1"></i>Մաքրել
+                </button>
+            </div>
+        </div>
+
+        <!-- VIEW 1: Materials Grid -->
+        <div id="view-materials-container" class="block">
+            <div id="materials-bento-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 auto-rows-[250px]"></div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden flex-col items-center justify-center py-20 text-center">
+                <div class="w-16 h-16 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-600 text-2xl mb-4">
+                    <i class="fa-solid fa-folder-open"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-300">Ոչինչ չի գտնվել</h3>
+                <p class="text-sm text-slate-500 mt-1 max-w-sm">Փորձեք փոխել որոնման բառերը կամ ընտրված ֆիլտրերը։</p>
+                <button onclick="resetAllFilters()" class="mt-4 px-4 py-2 rounded-lg bg-gold-600 text-slate-950 font-semibold text-xs hover:bg-gold-500 transition-all">
+                    Մաքրել Ֆիլտրերը
+                </button>
+            </div>
+        </div>
+
+        <!-- VIEW 2: Domains Tab -->
+        <div id="view-domains-container" class="hidden">
+            <div class="mb-6">
+                <h3 class="text-xl font-bold font-serif text-amber-300">Ուսումնական Ոլորտներ</h3>
+                <p class="text-slate-400 text-sm mt-1">Ընտրեք ոլորտ՝ ուսումնասիրելու համապատասխան դասագրքերը, նյութերը և տեսադասերը։</p>
+            </div>
+
+            <div id="domains-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="relative z-10 border-t border-slate-800 bg-slate-950/80 py-8 mt-12">
+        <div class="max-w-7xl mx-auto px-4 text-center sm:flex sm:justify-between sm:text-left text-xs text-slate-500">
+            <div>
+                <p class="text-slate-400 font-serif font-bold text-sm"> Bibliotheca Alexandrina Digital Collection</p>
+                <p class="mt-1">Թվային Ուսումնական Գրադարանի Արխիվային Համակարգ</p>
+            </div>
+            <div class="mt-4 sm:mt-0 flex justify-center sm:justify-end space-x-6">
+                <span class="hover:text-gold-400 transition-colors"><i class="fa-solid fa-link mr-1"></i> Proton Drive & YouTube Links</span>
+                <span class="hover:text-gold-400 transition-colors"><i class="fa-solid fa-book-open mr-1"></i> Open Academic Resources</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Modal: Item Detail View -->
+    <div id="item-detail-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden transition-opacity duration-300">
+        <div class="relative w-full max-w-3xl max-h-[90vh] bg-slate-900 border border-amber-500/30 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+            
+            <!-- Modal Header -->
+            <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+                <div class="flex items-center space-x-3">
+                    <span id="modal-item-type-badge" class="px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/30 text-xs font-semibold"></span>
+                    <span id="modal-item-domain-badge" class="px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 text-xs font-medium truncate max-w-[220px]"></span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button id="modal-bookmark-btn" onclick="toggleCurrentModalBookmark()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-gold-400 transition-all text-sm">
+                        <i class="fa-regular fa-bookmark"></i>
+                    </button>
+                    <button onclick="closeDetailModal()" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-100 transition-all">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="p-6 overflow-y-auto space-y-6 flex-grow">
+                <div>
+                    <h2 id="modal-item-title" class="text-2xl font-serif font-bold text-slate-100"></h2>
+                    <div class="flex flex-wrap items-center gap-4 mt-2 text-xs text-slate-400">
+                        <span><i class="fa-solid fa-user-pen mr-1.5 text-amber-500"></i><strong id="modal-item-author" class="text-slate-200"></strong></span>
+                        <span><i class="fa-solid fa-file-lines mr-1.5 text-amber-500"></i><span id="modal-item-pages"></span></span>
+                        <span><i class="fa-solid fa-star mr-1.5 text-yellow-500"></i><span id="modal-item-rating"></span></span>
+                    </div>
+                </div>
+
+                <!-- Direct Access Button Card -->
+                <div id="modal-link-box" class="p-5 rounded-xl bg-gradient-to-r from-amber-950/50 via-slate-900 to-slate-950 border border-gold-500/30 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
+                    <div>
+                        <h4 class="text-sm font-bold text-amber-300 flex items-center">
+                            <i class="fa-solid fa-cloud-arrow-down mr-2 text-gold-400"></i> Ռեսուրսի Անմիջական Հղում
+                        </h4>
+                        <p class="text-xs text-slate-400 mt-1">Բացեք կամ ներբեռնեք ֆայլը/տեսանյութը Proton Drive-ից կամ YouTube-ից։</p>
+                    </div>
+                    <a id="modal-open-link-btn" href="#" target="_blank" rel="noopener noreferrer" onclick="return handleResourceLinkClick(event, this.href)" class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-gold-500 to-amber-600 hover:from-gold-400 hover:to-amber-500 text-slate-950 font-bold text-sm shadow-lg shadow-gold-500/20 transition-all flex items-center justify-center space-x-2 shrink-0">
+                        <span>Բացել Ռեսուրսը</span>
+                        <i class="fa-solid fa-up-right-from-square text-xs"></i>
+                    </a>
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Համառոտ Նկարագրություն & Բովանդակություն</h4>
+                    <p id="modal-item-description" class="text-slate-300 text-sm leading-relaxed bg-slate-950/60 p-4 rounded-xl border border-slate-800/80"></p>
+                </div>
+
+                <!-- Tags List -->
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Թեգեր</h4>
+                    <div id="modal-item-tags" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- Academic Citation -->
+                <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider"><i class="fa-solid fa-quote-right mr-1"></i> Հղման Ձևաչափ (Citation)</span>
+                        <button onclick="copyCitation()" class="text-xs text-gold-400 hover:text-gold-300 font-semibold flex items-center space-x-1">
+                            <i class="fa-regular fa-copy"></i>
+                            <span id="copy-citation-text">Պատճենել</span>
+                        </button>
+                    </div>
+                    <code id="modal-item-citation" class="block text-xs text-amber-200/90 font-mono bg-slate-900 p-2.5 rounded border border-slate-800 break-all"></code>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between">
+                <span class="text-xs text-slate-500">ID: <span id="modal-item-id">ALX-000</span></span>
+                <button onclick="closeDetailModal()" class="px-5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium transition-all">
+                    Փակել
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Add New Material -->
+    <div id="add-item-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden">
+        <div class="relative w-full max-w-xl bg-slate-900 border border-gold-500/30 rounded-2xl shadow-2xl overflow-hidden p-6 max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-plus text-gold-400"></i>
+                    <h3 class="text-lg font-bold font-serif text-slate-100">Ավելացնել Նոր Ռեսուրս</h3>
+                </div>
+                <button onclick="closeAddModal()" class="text-slate-400 hover:text-slate-100">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="add-item-form" onsubmit="handleAddNewItem(event)" class="space-y-4 overflow-y-auto pr-1">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Վերնագիր *</label>
+                    <input type="text" id="add-title" required placeholder="օր․ Վերլուծական Երկրաչափություն" class="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-100 focus:border-gold-500 focus:outline-none">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Հեղինակ / Աղբյուր</label>
+                        <input type="text" id="add-author" placeholder="օր․ Գ․ Ղազարյան" class="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-100 focus:border-gold-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">Ձևաչափ *</label>
+                        <select id="add-type" class="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:border-gold-500 focus:outline-none">
+                            <option value="գիրք">Գիրք / Դասագիրք</option>
+                            <option value="նյութ">Ուսումնական նյութ</option>
+                            <option value="տեսանյութ">Տեսանյութ / Տեսադաս</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Ոլորտ *</label>
+                    <select id="add-domain" required class="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:border-gold-500 focus:outline-none">
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Ռեսուրսի Հղում (Drive / YouTube / Web) *</label>
+                    <input type="url" id="add-link" required placeholder="https://..." class="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-100 focus:border-gold-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Նկարագրություն</label>
+                    <textarea id="add-description" rows="3" placeholder="Համառոտ տեղեկություն բովանդակության մասին..." class="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-100 focus:border-gold-500 focus:outline-none"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">Թեգեր (ստորակետով բաժանված)</label>
+                    <input type="text" id="add-tags" placeholder="օր․ Մատրիցներ, Գծային, Խնդիրներ" class="w-full px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-100 focus:border-gold-500 focus:outline-none">
+                </div>
+
+                <div class="mt-6 pt-4 border-t border-slate-800 flex justify-end space-x-3">
+                    <button type="button" onclick="closeAddModal()" class="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700">Չեղարկել</button>
+                    <button type="submit" class="px-5 py-2 rounded-lg bg-gold-600 hover:bg-gold-500 text-slate-950 font-bold text-xs transition-all">Ավելացնել</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Import Excel / CSV / Google Drive -->
+    <div id="import-excel-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden">
+        <div class="relative w-full max-w-xl bg-slate-900 border border-emerald-500/30 rounded-2xl shadow-2xl overflow-hidden p-6">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-file-excel text-xl text-emerald-400"></i>
+                    <h3 class="text-lg font-bold font-serif text-slate-100">Ներմուծել Ռեսուրսներ Excel / Drive-ից</h3>
+                </div>
+                <button onclick="closeImportModal()" class="text-slate-400 hover:text-slate-100">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="space-y-5">
+                <!-- Option 1: File Dropzone -->
+                <div class="p-5 rounded-xl bg-slate-950 border-2 border-dashed border-slate-800 hover:border-emerald-500/50 transition-all text-center group cursor-pointer" onclick="document.getElementById('excel-file-input').click()">
+                    <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleExcelFileUpload(event)">
+                    <i class="fa-solid fa-cloud-arrow-up text-3xl text-slate-600 group-hover:text-emerald-400 transition-colors mb-2"></i>
+                    <h4 class="text-sm font-semibold text-slate-200">Ընտրեք կամ քաշեք `.xlsx`, `.xls` կամ `.csv` ֆայլը</h4>
+                    <p class="text-xs text-slate-500 mt-1">Ավտոմատ կընթերցվեն սյունակները (Վերնագիր, Հեղինակ, Հղում, Ոլորտ, Տեսակ, Նկարագրություն)</p>
+                </div>
+
+                <div class="relative flex py-1 items-center">
+                    <div class="flex-grow border-t border-slate-800"></div>
+                    <span class="flex-shrink mx-4 text-xs font-semibold text-slate-500 uppercase">ԿԱՄ Google Drive / Sheets Հղումով</span>
+                    <div class="flex-grow border-t border-slate-800"></div>
+                </div>
+
+                <!-- Option 2: Google Drive / Sheets CSV URL -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">
+                        <i class="fa-brands fa-google-drive text-emerald-400 mr-1"></i> Google Sheets / Drive CSV Հանրային Հղում
+                    </label>
+                    <div class="flex gap-2">
+                        <input type="url" id="drive-url-input" value="https://docs.google.com/spreadsheets/d/1Q1UookTiNMp58gxazcvHkDt38KDZMZ8q/export?format=csv" placeholder="https://docs.google.com/spreadsheets/d/.../export?format=csv" class="flex-grow px-3.5 py-2.5 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:border-emerald-500 focus:outline-none">
+                        <button onclick="handleDriveUrlImport()" class="px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs transition-all shrink-0">
+                            Ներբեռնել
+                        </button>
+                    </div>
+                    <p class="text-[11px] text-slate-500 mt-1.5">
+                        * Google Sheets-ում ընտրեք <em>File ➔ Share ➔ Share with anyone</em> կամ <em>Publish to web ➔ CSV</em>։
+                    </p>
+                </div>
+
+                <!-- Status Feedback Message Box -->
+                <div id="import-status-box" class="hidden p-3 rounded-lg text-xs border"></div>
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-slate-800 flex justify-end">
+                <button onclick="closeImportModal()" class="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700">Փակել</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Side Drawer: Bookmarked Items -->
+    <div id="bookmarks-drawer" class="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-slate-900 border-l border-slate-800 shadow-2xl transform translate-x-full transition-transform duration-300 flex flex-col">
+        <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-bookmark text-gold-400"></i>
+                <h3 class="text-base font-bold text-slate-200 font-serif">Էջանշված Ռեսուրսներ</h3>
+            </div>
+            <button onclick="toggleBookmarksDrawer()" class="p-2 text-slate-400 hover:text-slate-100">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div id="bookmarks-list" class="p-4 overflow-y-auto flex-grow space-y-3"></div>
+
+        <div class="p-4 border-t border-slate-800 bg-slate-950 text-center">
+            <span id="bookmarks-count-footer" class="text-xs text-slate-400">0 պահպանված նյութ</span>
+        </div>
+    </div>
+    
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        const DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1Q1UookTiNMp58gxazcvHkDt38KDZMZ8q/export?format=csv';
+
+        /* Forces the resource link to open in a real, independent new browser tab
+           instead of being intercepted/rewritten by a hosting page's embedded iframe. */
+        function handleResourceLinkClick(event, url) {
+            if (!url || url === '#') return false;
+            event.preventDefault();
+            const win = window.open(url, '_blank', 'noopener,noreferrer');
+            if (win) win.opener = null;
+            return false;
+        }
+
+        // Toast Notification System
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let icon = 'fa-check-circle text-emerald-400';
+            let bg = 'bg-slate-900 border-emerald-500/30';
+            
+            if (type === 'info') {
+                icon = 'fa-info-circle text-blue-400';
+                bg = 'bg-slate-900 border-blue-500/30';
+            } else if (type === 'warning') {
+                icon = 'fa-bookmark text-gold-400';
+                bg = 'bg-slate-900 border-gold-500/30';
+            }
+            
+            toast.className = `flex items-center space-x-2 px-4 py-3 rounded-lg border ${bg} shadow-lg text-sm text-slate-200 toast-enter`;
+            toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(100%)';
+                toast.style.transition = 'all 0.3s ease-in';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function openImportModal() {
+            document.getElementById('import-excel-modal').classList.remove('hidden');
+            hideImportStatus();
+        }
+
+        function closeImportModal() {
+            document.getElementById('import-excel-modal').classList.add('hidden');
+        }
+
+        function showImportStatus(msg, isSuccess = true) {
+            const box = document.getElementById('import-status-box');
+            box.classList.remove('hidden', 'bg-red-500/10', 'text-red-400', 'border-red-500/30', 'bg-emerald-500/10', 'text-emerald-300', 'border-emerald-500/30');
+            if (isSuccess) {
+                box.classList.add('bg-emerald-500/10', 'text-emerald-300', 'border-emerald-500/30');
+            } else {
+                box.classList.add('bg-red-500/10', 'text-red-400', 'border-red-500/30');
+            }
+            box.innerHTML = msg;
+        }
+
+        function hideImportStatus() {
+            document.getElementById('import-status-box').classList.add('hidden');
+        }
+
+        /* Reads uploaded Excel/CSV file from local disk */
+        function handleExcelFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            showImportStatus('<i class="fa-solid fa-spinner fa-spin mr-1"></i> Կարդացվում է ֆայլը...');
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+                    processImportedRows(jsonRows);
+                } catch (err) {
+                    showImportStatus('<i class="fa-solid fa-circle-exclamation mr-1"></i> Սխալ Excel ֆայլը կարդալիս: ' + err.message, false);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        /* Fetches CSV content from a public Google Drive / Sheets CSV link */
+        async function handleDriveUrlImport() {
+            let url = document.getElementById('drive-url-input').value.trim();
+            if (!url) {
+                showImportStatus('Խնդրում ենք մուտքագրել հղումը։', false);
+                return;
+            }
+
+            // Convert Google Sheets edit URL to CSV export format automatically if needed
+            if (url.includes('docs.google.com/spreadsheets') && !url.includes('/export')) {
+                const sheetIdMatch = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+                if (sheetIdMatch && sheetIdMatch[1]) {
+                    url = `https://docs.google.com/spreadsheets/d/${sheetIdMatch[1]}/export?format=csv`;
+                }
+            }
+
+            showImportStatus('<i class="fa-solid fa-spinner fa-spin mr-1"></i> Ներբեռնվում է Google Drive/Sheets տվյալները...');
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Չհաջողվեց ներբեռնել (կարգավորեք Drive հղումը որպես "Anyone with the link can view")');
+                
+                const csvText = await response.text();
+                const workbook = XLSX.read(csvText, { type: 'string' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+                processImportedRows(jsonRows);
+            } catch (err) {
+                showImportStatus('<i class="fa-solid fa-circle-exclamation mr-1"></i> ' + err.message, false);
+            }
+        }
+
+        /* Flexible row parser mapping various column name synonyms */
+        function processImportedRows(rows) {
+            if (!rows || rows.length === 0) {
+                showImportStatus('Ֆայլը դատարկ է կամ տվյալներ չեն գտնվել։', false);
+                return;
+            }
+
+            let addedCount = 0;
+            rows.forEach((row, idx) => {
+                // Find matching values regardless of exact column casing/naming
+                const title = row['Վերնագիր'] || row['title'] || row['Title'] || row['Name'] || row['Անվանում'] || '';
+                if (!title) return;
+
+                const author = row['Հեղինակ'] || row['author'] || row['Author'] || 'Անհայտ';
+                const link = row['Հղում'] || row['link'] || row['Link'] || row['URL'] || '#';
+                const domain = row['Ոլորտ'] || row['domain'] || row['Domain'] || row['Կատեգորիա'] || 'Տեղեկատվական տեխնոլոգիաներ';
+                const type = row['Տեսակ'] || row['type'] || row['Type'] || row['Ձևաչափ'] || 'գիրք';
+                const description = row['Նկարագրություն'] || row['description'] || row['Description'] || 'Ներմուծված ուսումնական նյութ։';
+                const tagsRaw = row['Թեգեր'] || row['tags'] || row['Tags'] || '';
+
+                const tags = typeof tagsRaw === 'string' && tagsRaw ? tagsRaw.split(/[,;]/).map(t => t.trim()).filter(Boolean) : ['Excel'];
+
+                // Auto add to domains if missing
+                if (!DOMAINS_DATA.some(d => d.title === domain)) {
+                    DOMAINS_DATA.push({
+                        id: `DOM-CUSTOM-${DOMAINS_DATA.length + 1}`,
+                        title: domain,
+                        icon: 'fa-folder-open',
+                        color: 'from-slate-800/40 to-slate-900/90',
+                        borderColor: 'border-slate-700',
+                        description: `Ներմուծված ոլորտ՝ ${domain}`,
+                        tags: tags
+                    });
+                }
+
+                materialsData.unshift({
+                    id: `ALX-IMP-${Date.now()}-${idx}`,
+                    title,
+                    author,
+                    link,
+                    domain,
+                    type,
+                    rating: 5.0,
+                    bentoSpan: '',
+                    description,
+                    tags,
+                    bgAccent: 'from-emerald-950/30 to-slate-900/90'
+                });
+
+                addedCount++;
+            });
+
+            if (addedCount > 0) {
+                populateDomainDropdowns();
+                updateStatsCounters();
+                renderTagPills();
+                applyFilters();
+                renderDomainsTab();
+                showImportStatus(`<i class="fa-solid fa-circle-check mr-1"></i> Հաջողությամբ ավելացվեց ${addedCount} նոր ռեսուրս Excel/Drive-ից:`, true);
+                showToast(`${addedCount} նյութ հաջողությամբ ներմուծվեց:`);
+                setTimeout(() => closeImportModal(), 1800);
+            } else {
+                showImportStatus('Չհաջողվեց ճանաչել սյունակները։ Համոզվեք, որ Excel-ում կա «Վերնագիր» կամ «Title» սյունակ։', false);
+            }
+        }
+
+        const DOMAINS_DATA = [
+            {
+                id: 'DOM-ALG',
+                title: 'Վերլուծական Երկրաչափություն և Գծային Հանրահաշիվ',
+                icon: 'fa-square-root-variable',
+                color: 'from-gold-500/15 to-amber-700/10',
+                borderColor: 'border-gold-500/30',
+                description: 'Վեկտորական տարածություններ, մատրիցներ, որոշիչներ, հարթության և տարածության երկրաչափական խնդիրներ։',
+                tags: ['Մատրիցներ', 'Վեկտորներ', 'Գծային Հանրահաշիվ', 'Խնդրագիրք']
+            },
+            {
+                id: 'DOM-ANALYSIS',
+                title: 'Մաթեմատիկական Անալիզ',
+                icon: 'fa-chart-line',
+                color: 'from-teal-500/15 to-cyan-700/10',
+                borderColor: 'border-teal-500/30',
+                description: 'Ֆունկցիայի ածանցյալ, ինտեգրալային հաշիվ, աստիճանային շարքեր և դիֆերենցիալ հավասարումներ։',
+                tags: ['Մաթ_Անալիզ', 'Տնտեսագիտություն', 'Ինտեգրալ']
+            },
+            {
+                id: 'DOM-MICRO',
+                title: 'Միկրոտնտեսագիտություն',
+                icon: 'fa-scale-balanced',
+                color: 'from-rose-500/15 to-pink-700/10',
+                borderColor: 'border-rose-500/30',
+                description: 'Պահանջարկի և առաջարկի առանձգականություն, սպառողի վարքագիծ, շուկայական կառուցվածքներ և մոնոպոլիա։',
+                tags: ['Միկրոէկոնոմիկա', 'Շուկա', 'Էկոնոմիքս']
+            },
+            {
+                id: 'DOM-MACRO',
+                title: 'Մակրոտնտեսագիտություն',
+                icon: 'fa-earth-americas',
+                color: 'from-indigo-500/15 to-slate-700/10',
+                borderColor: 'border-indigo-500/30',
+                description: 'ՀՆԱ, ինֆլյացիա, զբաղվածություն, դրամավարկային և հարկաբյուջետային քաղաքականություն։',
+                tags: ['Մակրոտնտեսագիտություն', 'ՀՆԱ', 'Տնտեսություն']
+            },
+            {
+                id: 'DOM-MGMT',
+                title: 'Մենեջմենթի հիմունքներ',
+                icon: 'fa-sitemap',
+                color: 'from-gold-500/15 to-amber-700/10',
+                borderColor: 'border-gold-500/30',
+                description: 'Կազմակերպչական կառուցվածքներ, ռազմավարական պլանավորում, առաջնորդություն և որոշումների կայացում։',
+                tags: ['Մենեջմենթ', 'Կառավարում', 'Առաջնորդություն']
+            },
+            {
+                id: 'DOM-PROD',
+                title: 'Արտադրության մենեջմենթ',
+                icon: 'fa-industry',
+                color: 'from-teal-500/15 to-cyan-700/10',
+                borderColor: 'border-teal-500/30',
+                description: 'Արտադրական պրոցեսների կազմակերպում, որակի կառավարում, լոգիստիկա և պաշարների պլանավորում։',
+                tags: ['Արտադրություն', 'Պրոցեսներ', 'Լոգիստիկա']
+            },
+            {
+                id: 'DOM-SERV',
+                title: 'Ծառայությունների ոլորտի կառավարում & Էկոնոմիկա',
+                icon: 'fa-concierge-bell',
+                color: 'from-rose-500/15 to-pink-700/10',
+                borderColor: 'border-rose-500/30',
+                description: 'Ծառայությունների որակի գնահատում, սպասարկման ոլորտի առանձնահատկություններ և էկոնոմիկա։',
+                tags: ['Ծառայություններ', 'Սպասարկում', 'Էկոնոմիկա']
+            },
+            {
+                id: 'DOM-OR',
+                title: 'Գործույթների հետազոտման մաթեմատիկական մեթոդներ',
+                icon: 'fa-diagram-project',
+                color: 'from-indigo-500/15 to-slate-700/10',
+                borderColor: 'border-indigo-500/30',
+                description: 'Գծային ծրագրավորում, սիմպլեքս մեթոդ, տրանսպորտային խնդիր, խաղերի տեսություն և ցանցային պլանավորում։',
+                tags: ['Գործույթներ', 'Ծրագրավորում', 'Դասախոսություն']
+            },
+            {
+                id: 'DOM-FIN',
+                title: 'Ֆինանսներ',
+                icon: 'fa-coins',
+                color: 'from-gold-500/15 to-amber-700/10',
+                borderColor: 'border-gold-500/30',
+                description: 'Դրամաշրջանառություն, մուրհակներ, անուիտետ, ֆինանսական մաթեմատիկա և ներդրումներ։',
+                tags: ['Ֆինանսներ', 'Մուրհակ', 'Անուիտետ']
+            },
+            {
+                id: 'DOM-PSYCH',
+                title: 'Հոգեբանություն',
+                icon: 'fa-brain',
+                color: 'from-teal-500/15 to-cyan-700/10',
+                borderColor: 'border-teal-500/30',
+                description: 'Ընդհանուր և սոցիալական հոգեբանություն, անձ, մոտիվացիա, իմացական գործընթացներ և մտածողություն։',
+                tags: ['Հոգեբանություն', 'Անձ', 'Մոտիվացիա']
+            },
+            {
+                id: 'DOM-IT',
+                title: 'Տեղեկատվական տեխնոլոգիաներ',
+                icon: 'fa-laptop-code',
+                color: 'from-rose-500/15 to-pink-700/10',
+                borderColor: 'border-rose-500/30',
+                description: 'Համակարգչային հմտություններ, ծրագրային ապահովում, տվյալների բազաներ և ՏՏ հիմունքներ։',
+                tags: ['ՏՏ', 'Համակարգիչ', 'Տեխնոլոգիաներ']
+            },
+            {
+                id: 'DOM-WORLD',
+                title: 'Համաշխարհային տնտեսություն & Պատմություն',
+                icon: 'fa-globe',
+                color: 'from-indigo-500/15 to-slate-700/10',
+                borderColor: 'border-indigo-500/30',
+                description: 'Միջազգային տնտեսական հարաբերություններ, արտաքին առևտուր և տնտեսական պատմություն։',
+                tags: ['Համաշխարհային', 'Պատմություն', 'Առևտուր']
+            }
+        ];
+
+        let materialsData = [
+            {
+                id: 'ALX-001',
+                title: 'Վերլուծական երկրաչափության և գծային հանրահաշվի խնդրագիրք',
+                author: 'Անհայտ / Դասախոսական կազմ',
+                type: 'նյութ',
+                domain: 'Վերլուծական Երկրաչափություն և Գծային Հանրահաշիվ',
+                link: 'https://drive.proton.me/urls/GZWC6BE5SM#7PPtyTMYXXwk',
+                rating: 4.8,
+                bentoSpan: 'bento-wide',
+                description: 'Խնդիրների և վարժությունների ժողովածու վեկտորական հանրահաշվի, մատրիցների, որոշիչների և հարթության վրա ուղղի հավասարումների վերաբերյալ։',
+                tags: ['Խնդրագիրք', 'Գծային_Հանրահաշիվ', 'Վերլուծական_Երկրաչափություն'],
+                bgAccent: 'from-amber-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-002',
+                title: 'Математика в экономике (Часть 2)',
+                author: 'Ю. С. Солодовников',
+                type: 'գիրք',
+                domain: 'Մաթեմատիկական Անալիզ',
+                link: 'https://drive.proton.me/urls/VSJK0JXR0W#CmyiiYwlkX41',
+                rating: 4.9,
+                bentoSpan: 'bento-tall',
+                description: 'Учебное пособие по математическому анализу и линейной алгебре для студентов экономических специальностей. Часть 2.',
+                tags: ['Солодовников', 'Математика', 'Экономика'],
+                bgAccent: 'from-teal-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-003',
+                title: 'Գ․ Ղազարյան — Վերլուծական երկրաչափություն (Դասախոսություններ)',
+                author: 'Գ․ Ղազարյան',
+                type: 'նյութ',
+                domain: 'Վերլուծական Երկրաչափություն և Գծային Հանրահաշիվ',
+                link: 'https://drive.proton.me/urls/K3R01XEGER#dgRnitXohfV6',
+                rating: 4.7,
+                bentoSpan: '',
+                description: 'Վերլուծական երկրաչափության ամբողջական դասախոսությունների շարք, տեսական դրույթներ և ապացույցներ։',
+                tags: ['Ղազարյան', 'Դասախոսություն', 'Երկրաչափություն'],
+                bgAccent: 'from-amber-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-004',
+                title: 'Математика в экономике (Часть 1)',
+                author: 'Ю. С. Солодовников',
+                type: 'գիրք',
+                domain: 'Մաթեմատիկական Անալիզ',
+                link: 'https://drive.proton.me/urls/Z3FPTWJ5JC#rq5mdWKQrZaO',
+                rating: 4.9,
+                bentoSpan: '',
+                description: 'Учебное пособие: введение в математический анализ, функции одной и нескольких переменных в экономике.',
+                tags: ['Солодовников', 'Матанализ', 'Учебник'],
+                bgAccent: 'from-teal-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-005',
+                title: 'Линейная алгебра (Полный Видеокурс)',
+                author: 'YouTube Online Academy',
+                type: 'տեսանյութ',
+                domain: 'Վերլուծական Երկրաչափություն և Գծային Հանրահաշիվ',
+                link: 'https://www.youtube.com/playlist?list=PL8YZyma552VfeWdaBSz5zj195mPwaDnnk',
+                rating: 5.0,
+                bentoSpan: 'bento-featured',
+                description: 'Ամբողջական տեսադասընթացի փլեյլիստ նվիրված գծային հանրահաշվին, մատրիցներին, սեփական արժեքներին և վեկտորական տարածություններին։',
+                tags: ['Տեսադաս', 'YouTube', 'Գծային_Հանրահաշիվ'],
+                bgAccent: 'from-amber-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-006',
+                title: 'Վերլուծական երկրաչափության և գծային հանրահաշվի խնդրագիրք տնտեսագետների համար',
+                author: 'Տնտեսագիտական Ֆակուլտետ',
+                type: 'գիրք',
+                domain: 'Վերլուծական Երկրաչափություն և Գծային Հանրահաշիվ',
+                link: 'https://drive.proton.me/urls/GZWC6BE5SM#7PPtyTMYXXwk',
+                rating: 4.8,
+                bentoSpan: '',
+                description: 'Մասնագիտացված խնդրագիրք տնտեսագիտական կիրառություններով և կիրառական օրինակներով։',
+                tags: ['Խնդրագիրք', 'Տնտեսագետներ', 'Մաթեմատիկա'],
+                bgAccent: 'from-amber-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-007',
+                title: 'Մաթեմատիկան տնտեսագիտության մեջ (Մաս 2)',
+                author: 'Ուսումնական ձեռնարկ',
+                type: 'գիրք',
+                domain: 'Մաթեմատիկական Անալիզ',
+                link: 'https://drive.proton.me/urls/VSJK0JXR0W#CmyiiYwlkX41',
+                rating: 4.6,
+                bentoSpan: '',
+                description: 'Բարձրագույն մաթեմատիկայի երկրորդ մասի հայերեն ուսումնական նյութերն ու օրինակները։',
+                tags: ['Մաթեմատիկա', 'Տնտեսագիտություն'],
+                bgAccent: 'from-teal-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-008',
+                title: 'Մաթեմատիկան տնտեսագիտության մեջ (Մաս 1)',
+                author: 'Ուսումնական ձեռնարկ',
+                type: 'նյութ',
+                domain: 'Վերլուծական Երկրաչափություն և Գծային Հանրահաշիվ',
+                link: 'https://drive.proton.me/urls/Z3FPTWJ5JC#rq5mdWKQrZaO',
+                rating: 4.7,
+                bentoSpan: '',
+                description: 'Գծային հանրահաշվի և վերլուծական երկրաչափության հիմնական դրույթները տնտեսագետների համար։',
+                tags: ['Մաթեմատիկա', 'Ձեռնարկ'],
+                bgAccent: 'from-amber-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-009',
+                title: 'Վերլուծական երկրաչափություն',
+                author: 'Գ․ Ղազարյան',
+                type: 'գիրք',
+                domain: 'Վերլուծական Երկրաչափություն և Գծային Հանրահաշիվ',
+                link: 'https://drive.proton.me/urls/K3R01XEGER#dgRnitXohfV6',
+                rating: 4.8,
+                bentoSpan: '',
+                description: 'Հիմնարար դասագիրք հարթության և տարածության վրա երկրաչափական պատկերների մաթեմատիկական հետազոտման վերաբերյալ։',
+                tags: ['Դասագիրք', 'Երկրաչափություն'],
+                bgAccent: 'from-amber-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-010',
+                title: 'Տնտեսագիտության տեսություն',
+                author: 'Բուհական դասագիրք',
+                type: 'գիրք',
+                domain: 'Միկրոտնտեսագիտություն',
+                link: 'https://drive.proton.me/urls/K3R01XEGER#dgRnitXohfV6',
+                rating: 4.7,
+                bentoSpan: 'bento-wide',
+                description: 'Տնտեսագիտական տեսության հիմնարար դասընթաց, պահանջարկ, առաջարկ, շուկայական հավասարակշռություն։',
+                tags: ['Տնտեսագիտություն', 'Տեսություն', 'Միկրո'],
+                bgAccent: 'from-rose-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-011',
+                title: 'Միկրոէկոնոմիկա (Հիմնարար դասընթաց)',
+                author: 'Անհայտ',
+                type: 'գիրք',
+                domain: 'Միկրոտնտեսագիտություն',
+                link: 'https://drive.proton.me/urls/8MFAZ35A8R#cYlkvOVJMak2',
+                rating: 4.9,
+                bentoSpan: '',
+                description: 'Սպառողական ընտրության տեսություն, արտադրության ծախսեր, կատարյալ և անկատար մրցակցություն։',
+                tags: ['Միկրոէկոնոմիկա', 'Շուկա'],
+                bgAccent: 'from-rose-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-012',
+                title: 'Էկոնոմիքս (Economics)',
+                author: 'Դասագիրք',
+                type: 'գիրք',
+                domain: 'Միկրոտնտեսագիտություն',
+                link: 'https://drive.proton.me/urls/G66V6N01XM#Ge9gGFuuGIrH',
+                rating: 5.0,
+                bentoSpan: '',
+                description: 'Ժամանակակից էկոնոմիքսի համաշխարհային ճանաչում ունեցող ուսումնական ձեռնարկ։',
+                tags: ['Էկոնոմիքս', 'Economics', 'Դասագիրք'],
+                bgAccent: 'from-rose-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-013',
+                title: 'Միկրոտնտեսագիտություն (Առաջադրանքներ & Խնդիրներ)',
+                author: 'Դասախոսական կազմ',
+                type: 'գիրք',
+                domain: 'Միկրոտնտեսագիտություն',
+                link: 'https://drive.proton.me/urls/6T06DP1914#UvQlxkGhIakf',
+                rating: 4.6,
+                bentoSpan: '',
+                description: 'Միկրոտնտեսագիտական խնդիրների, թեստերի և առաջադրանքների ժողովածու։',
+                tags: ['Խնդիրներ', 'Միկրոտնտեսագիտություն'],
+                bgAccent: 'from-rose-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-014',
+                title: 'Մենեջմենթ (Դասախոսությունների շարք)',
+                author: 'Կառավարման Ամբիոն',
+                type: 'նյութ',
+                domain: 'Մենեջմենթի հիմունքներ',
+                link: 'https://drive.proton.me/urls/3EET56EDAR#gyVi9HYIAEzB',
+                rating: 4.8,
+                bentoSpan: 'bento-tall',
+                description: 'Կազմակերպության կառավարման, պլանավորման, մոտիվացիայի և վերահսկողության դասախոսություններ։',
+                tags: ['Մենեջմենթ', 'Դասախոսություն', 'Կառավարում'],
+                bgAccent: 'from-amber-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-015',
+                title: 'Մենեջմենթ (Հիմնարար Դասագիրք)',
+                author: 'Անհայտ',
+                type: 'գիրք',
+                domain: 'Մենեջմենթի հիմունքներ',
+                link: 'https://drive.proton.me/urls/JT4QVJ2MWW#QlsjNL9LwM4G',
+                rating: 4.9,
+                bentoSpan: '',
+                description: 'Մենեջմենթի տեսական և կիրառական հիմունքները, ռազմավարական կառավարում և որոշումների ընդունում։',
+                tags: ['Մենեջմենթ', 'Ռազմավարություն'],
+                bgAccent: 'from-amber-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-016',
+                title: 'Ծառայության կառավարում (Պրոֆեսիոնալ Ձեռնարկ)',
+                author: 'Ծառայությունների Ամբիոն',
+                type: 'գիրք',
+                domain: 'Ծառայությունների ոլորտի կառավարում & Էկոնոմիկա',
+                link: 'https://drive.proton.me/urls/98SY96YBPM#KlkMujPz51bk',
+                rating: 4.8,
+                bentoSpan: 'bento-wide',
+                description: 'Սպասարկման ոլորտի կառավարման առանձնահատկությունները, որակի ապահովումը և հաճախորդների հետ հարաբերությունները։',
+                tags: ['Ծառայություն', 'Սպասարկում', 'Կառավարում'],
+                bgAccent: 'from-rose-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-017',
+                title: 'Համաշխարհային տնտեսություն (Դասագիրք)',
+                author: 'Միջազգային Տնտեսագիտություն',
+                type: 'գիրք',
+                domain: 'Համաշխարհային տնտեսություն & Պատմություն',
+                link: 'https://drive.proton.me/urls/836ZA4GJ1G#XR8sT1ZlmFWz',
+                rating: 4.9,
+                bentoSpan: '',
+                description: 'Միջազգային ապրանքային և ֆինանսական շուկաներ, ինտեգրացիոն գործընթացներ և տնտեսական գլոբալիզացիա։',
+                tags: ['Համաշխարհային', 'Գլոբալիզացիա'],
+                bgAccent: 'from-indigo-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-018',
+                title: 'Մակրոտնտեսագիտություն (Ուսումնական Նյութեր)',
+                author: 'Մակրոտնտեսագիտության Ամբիոն',
+                type: 'նյութ',
+                domain: 'Մակրոտնտեսագիտություն',
+                link: 'https://drive.proton.me/urls/9BFJFPCY9R#CVgFBvjJpZqE',
+                rating: 4.8,
+                bentoSpan: '',
+                description: 'Ազգային հաշիվների համակարգ, IS-LM մոդել, ինֆլյացիոն ճնշումներ և տնտեսական աճ։',
+                tags: ['Մակրո', 'IS-LM', 'Տնտեսություն'],
+                bgAccent: 'from-indigo-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-019',
+                title: 'Արտադրության մենեջմենթ (Դասընթաց)',
+                author: 'Արտադրական Ամբիոն',
+                type: 'գիրք',
+                domain: 'Արտադրության մենեջմենթ',
+                link: 'https://drive.proton.me/urls/GAP0PZQ7Q4#wfH3qbJUr5CP',
+                rating: 4.9,
+                bentoSpan: 'bento-wide',
+                description: 'Արտադրական հզորությունների պլանավորում, տեխնոլոգիական պրոցեսներ, որակի վերահսկում (TQM) և լոգիստիկա։',
+                tags: ['Արտադրություն', 'Լոգիստիկա', 'TQM'],
+                bgAccent: 'from-teal-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-020',
+                title: 'Գործույթների հետազոտման մաթեմատիկական մեթոդներ (Դասախոսություն 1-16)',
+                author: 'Մաթեմատիկական Մեթոդներ',
+                type: 'նյութ',
+                domain: 'Գործույթների հետազոտման մաթեմատիկական մեթոդներ',
+                link: 'https://drive.proton.me/urls/PS4Y6DRD90#RTlVZppXZO1m',
+                rating: 5.0,
+                bentoSpan: 'bento-featured',
+                description: 'Գործույթների հետազոտման ամբողջական դասախոսական փաթեթ՝ Սիմպլեքս մեթոդ, Երկակիություն, Տրանսպորտային խնդիր, Դինամիկ ծրագրավորում։',
+                tags: ['Գործույթներ', 'Սիմպլեքս', 'Օպտիմալացում'],
+                bgAccent: 'from-indigo-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-021',
+                title: 'Գործույթների հետազոտում — Խնդրագիրք',
+                author: 'Անհայտ',
+                type: 'գիրք',
+                domain: 'Գործույթների հետազոտման մաթեմատիկական մեթոդներ',
+                link: 'https://drive.proton.me/urls/J23288MNK0#AQCj7Xdj4M8o',
+                rating: 4.8,
+                bentoSpan: '',
+                description: 'Գծային և ոչ գծային ծրագրավորման խնդիրների լուծման օրինակներ և ինքնուրույն աշխատանքներ։',
+                tags: ['Խնդրագիրք', 'Գործույթներ'],
+                bgAccent: 'from-indigo-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-022',
+                title: 'Market Leader 3 (Business English)',
+                author: 'Cotton, Falvey, Kent',
+                type: 'գիրք',
+                domain: 'Տեղեկատվական տեխնոլոգիաներ',
+                link: 'https://drive.proton.me/urls/ZDAT804FKR#Uh2KHHr3E66E',
+                rating: 5.0,
+                bentoSpan: '',
+                description: 'Գործարար անգլերենի առաջատար դասագիրք բանակցությունների, գրագրության և միջազգային հաղորդակցության համար։',
+                tags: ['English', 'Business', 'MarketLeader'],
+                bgAccent: 'from-rose-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-023',
+                title: 'Экономическая история зарубежных стран',
+                author: 'Учебное пособие',
+                type: 'գիրք',
+                domain: 'Համաշխարհային տնտեսություն & Պատմություն',
+                link: 'https://drive.proton.me/urls/6ZVJ88XF1G#x4iP8zLDchQw',
+                rating: 4.7,
+                bentoSpan: '',
+                description: 'История экономического развития ведущих стран мира от древности до новейшего времени.',
+                tags: ['История', 'Экономика', 'Зарубежные'],
+                bgAccent: 'from-indigo-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-024',
+                title: 'Տեղեկատվական տեխնոլոգիաներ (Բուհական Դասագիրք)',
+                author: 'ՏՏ Ամբիոն',
+                type: 'գիրք',
+                domain: 'Տեղեկատվական տեխնոլոգիաներ',
+                link: 'https://drive.proton.me/urls/2R55WEDSTM#FUK0UFYgdqy0',
+                rating: 4.9,
+                bentoSpan: 'bento-wide',
+                description: 'Տեղեկատվական համակարգեր, տվյալների մշակում, ցանցային տեխնոլոգիաներ և կիբեռանվտանգության հիմունքներ։',
+                tags: ['ՏՏ', 'Տեխնոլոգիաներ', 'Համակարգիչ'],
+                bgAccent: 'from-rose-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-025',
+                title: 'Ֆինանսների տեսություն (Մուրհակ, Անուիտետ, Ֆինանսներ)',
+                author: 'Ֆինանսական Ամբիոն',
+                type: 'նյութ',
+                domain: 'Ֆինանսներ',
+                link: 'https://drive.proton.me/urls/9SN9MPYDC4#BSZHN106uxPG',
+                rating: 4.8,
+                bentoSpan: '',
+                description: 'Ֆինանսական գործիքներ, մուրհակների շրջանառություն, անուիտետային վճարումներ և տոկոսադրույքների հաշվարկ։',
+                tags: ['Ֆինանսներ', 'Մուրհակ', 'Անուիտետ'],
+                bgAccent: 'from-amber-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-026',
+                title: 'Ընդհանուր և Սոցիալական Հոգեբանություն',
+                author: 'Հոգեբանության Ամբիոն',
+                type: 'գիրք',
+                domain: 'Հոգեբանություն',
+                link: 'https://drive.proton.me/urls/P5XX20M9YR#rYWMFBzVKKUe',
+                rating: 4.9,
+                bentoSpan: 'bento-tall',
+                description: 'Անձի ձևավորում, խառնվածք, մոտիվացիա, իմացական գործընթացներ, ընկալում, երևակայություն և մտածողություն։',
+                tags: ['Հոգեբանություն', 'Անձ', 'Մոտիվացիա'],
+                bgAccent: 'from-teal-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-027',
+                title: ' Social Psychology (Գիտական Նյութ)',
+                author: 'Academic Research',
+                type: 'նյութ',
+                domain: 'Հոգեբանություն',
+                link: 'https://drive.proton.me/urls/9H02DXV2P8#gv5yoQhF3CoZ',
+                rating: 4.8,
+                bentoSpan: '',
+                description: 'Սոցիալական հոգեբանության հետազոտություններ, խմբային վարքագիծ, միջանձնային հարաբերություններ։',
+                tags: ['Psychology', 'Social', 'Research'],
+                bgAccent: 'from-teal-950/40 to-slate-900/90'
+            },
+            {
+                id: 'ALX-028',
+                title: 'Համակարգչից օգտվելու հմտություններ',
+                author: 'ՏՏ Դասընթաց',
+                type: 'գիրք',
+                domain: 'Տեղեկատվական տեխնոլոգիաներ',
+                link: 'https://drive.proton.me/urls/KQZVXS0M7W#evSYuDyVF3AR',
+                rating: 4.7,
+                bentoSpan: '',
+                description: 'Օպերացիոն համակարգեր, գրասենյակային ծրագրեր (Office/Excel/Word) և ինտերնետային ռեսուրսների արդյունավետ կիրառում։',
+                tags: ['Համակարգիչ', 'Excel', 'Office'],
+                bgAccent: 'from-rose-950/40 to-slate-900/90'
+            }
+        ];
+
+        /* App State */
+        let activeTab = 'materials';
+        let currentSearchQuery = '';
+        let selectedDomainFilter = 'ALL';
+        let selectedTypeFilter = 'ALL';
+        let selectedTagFilter = null;
+        let selectedSortOrder = 'NEWEST';
+        let currentModalItemId = null;
+        let bookmarks = JSON.parse(localStorage.getItem('alx_bookmarks') || '[]');
+
+        window.addEventListener('DOMContentLoaded', () => {
+            populateDomainDropdowns();
+            renderTagPills();
+            updateStatsCounters();
+            applyFilters();
+            renderDomainsTab();
+            updateBookmarksUI();
+
+            // Attempt automatic background sync with the provided Google Sheet
+            syncDefaultGoogleSheet(true);
+        });
+
+        async function syncDefaultGoogleSheet(quiet = false) {
+            if (!quiet) {
+                openImportModal();
+                showImportStatus('<i class="fa-solid fa-spinner fa-spin mr-1"></i> Սինքրոնացվում է Google Sheet-ից...', true);
+            }
+
+            try {
+                const response = await fetch(DEFAULT_SHEET_URL);
+                if (!response.ok) throw new Error('Հնարավոր չէ ներբեռնել Google Sheet-ը։ Համոզվեք, որ Google Sheet-ը ունի «Anyone with link can view» հասանելիություն։');
+                
+                const csvText = await response.text();
+                const workbook = XLSX.read(csvText, { type: 'string' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const jsonRows = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+                if (jsonRows && jsonRows.length > 0) {
+                    processImportedRows(jsonRows);
+                    if (!quiet) {
+                        showImportStatus('<i class="fa-solid fa-circle-check mr-1"></i> Հաջողությամբ սինքրոնացվեց Google Sheet-ի հետ։', true);
+                        showToast('Տվյալները սինքրոնացվեցին Google Sheet-ի հետ:');
+                    }
+                }
+            } catch (err) {
+                console.warn('Google Sheet Sync Status:', err.message);
+                if (!quiet) {
+                    showImportStatus('<i class="fa-solid fa-circle-exclamation mr-1"></i> ' + err.message, false);
+                }
+            }
+        }
+
+        function populateDomainDropdowns() {
+            const filterSelect = document.getElementById('domain-filter');
+            const addSelect = document.getElementById('add-domain');
+
+            if (filterSelect) filterSelect.innerHTML = '<option value="ALL">Բոլոր Ոլորտները</option>';
+            if (addSelect) addSelect.innerHTML = '';
+
+            DOMAINS_DATA.forEach(d => {
+                if (filterSelect) {
+                    const opt1 = document.createElement('option');
+                    opt1.value = d.title;
+                    opt1.textContent = d.title;
+                    filterSelect.appendChild(opt1);
+                }
+
+                if (addSelect) {
+                    const opt2 = document.createElement('option');
+                    opt2.value = d.title;
+                    opt2.textContent = d.title;
+                    addSelect.appendChild(opt2);
+                }
+            });
+        }
+
+        function renderTagPills() {
+            const container = document.getElementById('tags-pills-container');
+            container.innerHTML = '';
+
+            const allTags = new Set();
+            materialsData.forEach(m => m.tags.forEach(t => allTags.add(t)));
+
+            allTags.forEach(tag => {
+                const btn = document.createElement('button');
+                btn.onclick = () => selectTagFilter(tag);
+                btn.className = `px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                    selectedTagFilter === tag
+                        ? 'bg-gold-500 text-slate-950 font-bold shadow-md shadow-gold-500/20'
+                        : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/50'
+                }`;
+                btn.innerHTML = `#${tag}`;
+                container.appendChild(btn);
+            });
+        }
+
+        function updateStatsCounters() {
+            document.getElementById('stat-total-items').textContent = materialsData.length;
+            document.getElementById('stat-total-domains').textContent = DOMAINS_DATA.length;
+            const booksCount = materialsData.filter(m => m.type === 'գիրք').length;
+            document.getElementById('stat-books-count').textContent = booksCount;
+        }
+
+        function handleSearchInput() {
+            currentSearchQuery = document.getElementById('search-input').value.trim().toLowerCase();
+            applyFilters();
+        }
+
+        function selectTagFilter(tag) {
+            selectedTagFilter = (selectedTagFilter === tag) ? null : tag;
+            renderTagPills();
+            applyFilters();
+        }
+
+        function resetAllFilters() {
+            document.getElementById('search-input').value = '';
+            document.getElementById('domain-filter').value = 'ALL';
+            document.getElementById('type-filter').value = 'ALL';
+            document.getElementById('sort-filter').value = 'NEWEST';
+            
+            currentSearchQuery = '';
+            selectedDomainFilter = 'ALL';
+            selectedTypeFilter = 'ALL';
+            selectedTagFilter = null;
+            selectedSortOrder = 'NEWEST';
+
+            renderTagPills();
+            applyFilters();
+        }
+
+        function applyFilters() {
+            selectedDomainFilter = document.getElementById('domain-filter').value;
+            selectedTypeFilter = document.getElementById('type-filter').value;
+            selectedSortOrder = document.getElementById('sort-filter').value;
+
+            const isFiltered = currentSearchQuery !== '' || selectedDomainFilter !== 'ALL' || selectedTypeFilter !== 'ALL' || selectedTagFilter !== null;
+            document.getElementById('reset-filters-btn').style.display = isFiltered ? 'inline-flex' : 'none';
+
+            let filtered = materialsData.filter(item => {
+                const matchQuery = currentSearchQuery === '' ||
+                    item.title.toLowerCase().includes(currentSearchQuery) ||
+                    item.author.toLowerCase().includes(currentSearchQuery) ||
+                    item.description.toLowerCase().includes(currentSearchQuery) ||
+                    item.tags.some(t => t.toLowerCase().includes(currentSearchQuery));
+
+                const matchDomain = selectedDomainFilter === 'ALL' || item.domain === selectedDomainFilter;
+                const matchType = selectedTypeFilter === 'ALL' || item.type === selectedTypeFilter;
+                const matchTag = !selectedTagFilter || item.tags.includes(selectedTagFilter);
+
+                return matchQuery && matchDomain && matchType && matchTag;
+            });
+
+            if (selectedSortOrder === 'TITLE_ASC') {
+                filtered.sort((a, b) => a.title.localeCompare(b.title, 'hy'));
+            } else if (selectedSortOrder === 'RATING_DESC') {
+                filtered.sort((a, b) => b.rating - a.rating);
+            }
+
+            document.getElementById('filtered-count-badge').textContent = `${filtered.length} նյութ`;
+            renderMaterialsGrid(filtered);
+        }
+
+        function renderMaterialsGrid(items) {
+            const grid = document.getElementById('materials-bento-grid');
+            const emptyState = document.getElementById('empty-state');
+            grid.innerHTML = '';
+
+            if (items.length === 0) {
+                grid.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+                return;
+            }
+
+            grid.classList.remove('hidden');
+            emptyState.classList.add('hidden');
+            emptyState.classList.remove('flex');
+
+            items.forEach(item => {
+                const isBookmarked = bookmarks.includes(item.id);
+
+                let badgeIcon = 'fa-file-lines';
+                let badgeClass = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+                if (item.type === 'գիրք') {
+                    badgeIcon = 'fa-book';
+                    badgeClass = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+                } else if (item.type === 'տեսանյութ') {
+                    badgeIcon = 'fa-video';
+                    badgeClass = 'bg-red-500/10 text-red-400 border-red-500/20';
+                }
+
+                const card = document.createElement('div');
+                card.className = `group relative rounded-2xl p-5 bg-gradient-to-br ${item.bgAccent || 'from-slate-900 to-slate-950'} border border-slate-800 hover:border-gold-500/50 shadow-xl hover:shadow-2xl hover:shadow-amber-500/10 transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer ${item.bentoSpan || ''}`;
+                
+                card.onclick = () => openDetailModal(item.id);
+
+                card.innerHTML = `
+                    <div class="absolute -right-10 -bottom-10 w-32 h-32 bg-gold-500/5 rounded-full blur-2xl group-hover:bg-gold-500/15 transition-all"></div>
+
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${badgeClass} capitalize flex items-center gap-1.5">
+                                <i class="fa-solid ${badgeIcon} text-[10px]"></i> ${item.type}
+                            </span>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs text-yellow-400 font-bold flex items-center">
+                                    <i class="fa-solid fa-star text-[10px] mr-1"></i>${item.rating}
+                                </span>
+                                <button onclick="event.stopPropagation(); toggleBookmark('${item.id}')" class="text-slate-500 hover:text-gold-400 p-1 transition-colors">
+                                    <i class="${isBookmarked ? 'fa-solid fa-bookmark text-gold-400' : 'fa-regular fa-bookmark'}"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <h3 class="text-base sm:text-lg font-serif font-bold text-slate-100 group-hover:text-gold-300 transition-colors line-clamp-2">
+                            ${item.title}
+                        </h3>
+
+                        <p class="text-xs text-slate-400 mt-1 flex items-center">
+                            <i class="fa-solid fa-user-pen text-amber-500/80 mr-1.5 text-[10px]"></i>
+                            <span class="truncate">${item.author || 'Անհայտ'}</span>
+                        </p>
+
+                        <p class="text-xs text-slate-300/80 mt-3 line-clamp-2 font-sans leading-relaxed border-l-2 border-gold-600/40 pl-2.5 py-0.5">
+                            ${item.description}
+                        </p>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
+                        <span class="text-slate-400 truncate max-w-[160px]">
+                            <i class="fa-solid fa-folder text-slate-500 mr-1"></i>${item.domain}
+                        </span>
+                        <a href="${item.link}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation(); return handleResourceLinkClick(event, item.link)" class="px-2.5 py-1 rounded-lg bg-gold-500/10 hover:bg-gold-500/20 text-gold-300 border border-gold-500/30 font-semibold transition-all inline-flex items-center space-x-1">
+                            <span>Հղում</span>
+                            <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+                        </a>
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+
+        /* Render Domain Cards */
+        function renderDomainsTab() {
+            const container = document.getElementById('domains-cards-grid');
+            container.innerHTML = '';
+
+            DOMAINS_DATA.forEach(dom => {
+                const count = materialsData.filter(m => m.domain === dom.title).length;
+
+                const card = document.createElement('div');
+                card.className = `rounded-2xl p-6 bg-gradient-to-br ${dom.color} bg-slate-900/90 border ${dom.borderColor} hover:border-gold-500/60 transition-all duration-300 shadow-xl flex flex-col justify-between`;
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-center text-gold-400 text-xl shadow-inner">
+                                <i class="fa-solid ${dom.icon}"></i>
+                            </div>
+                            <span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-950 text-gold-400 border border-amber-500/20">
+                                ${count} Ռեսուրս
+                            </span>
+                        </div>
+
+                        <h3 class="text-lg font-serif font-bold text-slate-100">${dom.title}</h3>
+                        <p class="text-xs text-slate-400 mt-2 leading-relaxed">${dom.description}</p>
+
+                        <div class="mt-4 pt-3 border-t border-slate-800">
+                            <span class="text-[11px] uppercase tracking-wider text-slate-500 font-semibold block mb-2">Թեգեր՝</span>
+                            <div class="flex flex-wrap gap-1.5">
+                                ${dom.tags.map(t => `<span class="px-2 py-0.5 rounded bg-slate-950/60 text-slate-300 text-[11px] border border-slate-800">#${t}</span>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="filterByDomainFromCard('${dom.title}')" class="mt-6 w-full py-2.5 rounded-xl bg-gold-600/20 hover:bg-gold-600 text-gold-300 hover:text-slate-950 border border-gold-500/30 text-xs font-bold transition-all flex items-center justify-center space-x-2">
+                        <span>Դիտել Ռեսուրսները</span>
+                        <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                    </button>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        function switchTab(tabName) {
+            activeTab = tabName;
+            const btnMaterials = document.getElementById('tab-materials');
+            const btnDomains = document.getElementById('tab-domains');
+            const viewMaterials = document.getElementById('view-materials-container');
+            const viewDomains = document.getElementById('view-domains-container');
+            const filterControls = document.getElementById('filter-controls-container');
+
+            if (tabName === 'materials') {
+                btnMaterials.className = "flex items-center space-x-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all bg-gold-600 text-slate-950 shadow-md";
+                btnDomains.className = "flex items-center space-x-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50";
+                
+                viewMaterials.classList.remove('hidden');
+                viewDomains.classList.add('hidden');
+                filterControls.classList.remove('hidden');
+            } else {
+                btnDomains.className = "flex items-center space-x-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all bg-gold-600 text-slate-950 shadow-md";
+                btnMaterials.className = "flex items-center space-x-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50";
+
+                viewDomains.classList.remove('hidden');
+                viewMaterials.classList.add('hidden');
+                filterControls.classList.add('hidden');
+            }
+        }
+
+        function filterByDomainFromCard(domainTitle) {
+            switchTab('materials');
+            document.getElementById('domain-filter').value = domainTitle;
+            applyFilters();
+        }
+
+        function openDetailModal(id) {
+            const item = materialsData.find(m => m.id === id);
+            if (!item) return;
+
+            currentModalItemId = id;
+
+            document.getElementById('modal-item-title').textContent = item.title;
+            document.getElementById('modal-item-author').textContent = item.author || 'Անհայտ';
+            document.getElementById('modal-item-pages').textContent = item.type;
+            document.getElementById('modal-item-rating').textContent = item.rating;
+            document.getElementById('modal-item-type-badge').textContent = item.type;
+            document.getElementById('modal-item-domain-badge').textContent = item.domain;
+            document.getElementById('modal-item-description').textContent = item.description;
+            document.getElementById('modal-item-id').textContent = item.id;
+
+            const linkBtn = document.getElementById('modal-open-link-btn');
+            linkBtn.href = item.link || '#';
+
+            const tagsContainer = document.getElementById('modal-item-tags');
+            tagsContainer.innerHTML = '';
+            item.tags.forEach(t => {
+                const tagSpan = document.createElement('span');
+                tagSpan.className = "px-2.5 py-1 rounded-md bg-slate-800 text-gold-400 text-xs font-mono border border-slate-700";
+                tagSpan.textContent = `#${t}`;
+                tagsContainer.appendChild(tagSpan);
+            });
+
+            const citation = `${item.author || 'Անհայտ'}. "${item.title}". Ոլորտ՝ ${item.domain}. Ալեքսանդրիայի Թվային Արխիվ, URL: ${item.link}`;
+            document.getElementById('modal-item-citation').textContent = citation;
+
+            updateModalBookmarkBtn();
+            document.getElementById('item-detail-modal').classList.remove('hidden');
+        }
+
+        function closeDetailModal() {
+            document.getElementById('item-detail-modal').classList.add('hidden');
+        }
+
+        function copyCitation() {
+            const citationText = document.getElementById('modal-item-citation').textContent;
+            const tempInput = document.createElement('textarea');
+            tempInput.value = citationText;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            showToast('Ակադեմիական հղումը պատճենվեց:', 'info');
+            
+            const copyBtn = document.getElementById('copy-citation-text');
+            copyBtn.textContent = 'Պատճենված է!';
+            setTimeout(() => { copyBtn.textContent = 'Պատճենել'; }, 2000);
+        }
+
+        /* Bookmarks System */
+        function toggleBookmark(id) {
+            const idx = bookmarks.indexOf(id);
+            if (idx > -1) {
+                bookmarks.splice(idx, 1);
+                showToast('Հեռացվեց էջանիշերից', 'warning');
+            } else {
+                bookmarks.push(id);
+                showToast('Ավելացվեց էջանիշերում', 'success');
+            }
+
+            localStorage.setItem('alx_bookmarks', JSON.stringify(bookmarks));
+            updateBookmarksUI();
+            applyFilters();
+            if (currentModalItemId === id) updateModalBookmarkBtn();
+        }
+
+        function toggleCurrentModalBookmark() {
+            if (currentModalItemId) toggleBookmark(currentModalItemId);
+        }
+
+        function updateModalBookmarkBtn() {
+            const btn = document.getElementById('modal-bookmark-btn');
+            const isBookmarked = bookmarks.includes(currentModalItemId);
+            btn.innerHTML = `<i class="${isBookmarked ? 'fa-solid fa-bookmark text-gold-400' : 'fa-regular fa-bookmark'}"></i>`;
+        }
+
+        function updateBookmarksUI() {
+            const badge = document.getElementById('bookmark-badge');
+            const list = document.getElementById('bookmarks-list');
+            const footerCount = document.getElementById('bookmarks-count-footer');
+
+            if (bookmarks.length > 0) {
+                badge.textContent = bookmarks.length;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+
+            footerCount.textContent = `${bookmarks.length} պահպանված նյութ`;
+
+            list.innerHTML = '';
+            if (bookmarks.length === 0) {
+                list.innerHTML = `
+                    <div class="text-center py-12 text-slate-500">
+                        <i class="fa-regular fa-bookmark text-3xl mb-2"></i>
+                        <p class="text-xs">Դեռևս չունեք էջանշված նյութեր։</p>
+                    </div>
+                `;
+                return;
+            }
+
+            bookmarks.forEach(id => {
+                const item = materialsData.find(m => m.id === id);
+                if (!item) return;
+
+                const itemCard = document.createElement('div');
+                itemCard.className = "p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between hover:border-gold-500/40 transition-all cursor-pointer";
+                itemCard.onclick = () => {
+                    toggleBookmarksDrawer();
+                    openDetailModal(item.id);
+                };
+
+                itemCard.innerHTML = `
+                    <div class="pr-2">
+                        <h4 class="text-xs font-serif font-bold text-slate-200 line-clamp-1">${item.title}</h4>
+                        <p class="text-[10px] text-slate-400 mt-0.5">${item.author || 'Անհայտ'} • ${item.type}</p>
+                    </div>
+                    <button onclick="event.stopPropagation(); toggleBookmark('${item.id}')" class="text-slate-500 hover:text-red-400 p-1 text-xs">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                `;
+
+                list.appendChild(itemCard);
+            });
+        }
+
+        function toggleBookmarksDrawer() {
+            const drawer = document.getElementById('bookmarks-drawer');
+            drawer.classList.toggle('translate-x-full');
+        }
+
+        /* Modal: Add New Material */
+        function openAddModal() {
+            document.getElementById('add-item-modal').classList.remove('hidden');
+        }
+
+        function closeAddModal() {
+            document.getElementById('add-item-modal').classList.add('hidden');
+        }
+
+        function handleAddNewItem(e) {
+            e.preventDefault();
+
+            const title = document.getElementById('add-title').value.trim();
+            const author = document.getElementById('add-author').value.trim();
+            const link = document.getElementById('add-link').value.trim();
+            const domain = document.getElementById('add-domain').value;
+            const type = document.getElementById('add-type').value;
+            const description = document.getElementById('add-description').value.trim();
+            const tagsInput = document.getElementById('add-tags').value.trim();
+
+            const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(Boolean) : ['Ռեսուրս'];
+
+            const newItem = {
+                id: `ALX-${String(materialsData.length + 1).padStart(3, '0')}`,
+                title,
+                author: author || 'Անհայտ',
+                link,
+                domain,
+                type,
+                rating: 5.0,
+                bentoSpan: '',
+                description: description || 'Ավելացված ուսումնական ռեսուրս։',
+                tags,
+                bgAccent: 'from-amber-950/30 to-slate-900/90'
+            };
+
+            materialsData.unshift(newItem);
+
+            updateStatsCounters();
+            renderTagPills();
+            applyFilters();
+            renderDomainsTab();
+            closeAddModal();
+            document.getElementById('add-item-form').reset();
+            
+            showToast('Նոր ռեսուրսը հաջողությամբ ավելացվեց:');
+        }
+    </script>
+</body>
+</html>
