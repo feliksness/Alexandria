@@ -256,7 +256,10 @@
             <div class="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none text-xs">
                 <span class="text-slate-500 shrink-0 font-medium mr-1"><i class="fa-solid fa-tags mr-1"></i>Թեգեր՝</span>
                 <div id="tags-pills-container" class="flex items-center space-x-2 shrink-0"></div>
-                <button id="reset-filters-btn" onclick="resetAllFilters()" class="hidden px-3 py-1 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs shrink-0 transition-all ml-auto">
+                <button id="only-bookmarked-btn" onclick="toggleOnlyBookmarkedFilter()" class="px-3 py-1 rounded-full bg-slate-900/80 hover:bg-gold-500/10 text-slate-400 hover:text-gold-300 border border-slate-800 hover:border-gold-500/40 text-xs shrink-0 transition-all flex items-center gap-1.5 ml-auto">
+                    <i class="fa-regular fa-bookmark"></i>Միայն Պահպանվածները
+                </button>
+                <button id="reset-filters-btn" onclick="resetAllFilters()" class="hidden px-3 py-1 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs shrink-0 transition-all">
                     <i class="fa-solid fa-xmark mr-1"></i>Մաքրել
                 </button>
             </div>
@@ -718,6 +721,54 @@
             return fallback;
         }
 
+        /* Normalizes any casing/spelling/language variant of the type field down to one of the
+           3 canonical values, so badge colors/icons and filters always work correctly regardless
+           of how the type was typed in the source spreadsheet. */
+        function normalizeType(raw) {
+            const v = String(raw || '').trim().toLowerCase();
+            if (v.includes('տեսանյութ') || v.includes('video') || v.includes('vid')) return 'տեսանյութ';
+            if (v.includes('նյութ') || v.includes('material') || v.includes('note')) return 'նյութ';
+            if (v.includes('գիրք') || v.includes('book')) return 'գիրք';
+            return 'գիրք';
+        }
+
+        /* Same domain -> color family mapping used for the curated dataset, so imported/synced
+           items get the same varied, cohesive card colors instead of one flat color. */
+        const DOMAIN_FAMILY_MAP = {
+            'Վերլուծական Երկրաչափություն և Գծային Հանրահաշիվ': 'gold',
+            'Մաթեմատիկական Անալիզ': 'teal',
+            'Միկրոտնտեսագիտություն': 'rose',
+            'Մակրոտնտեսագիտություն': 'indigo',
+            'Մենեջմենթի հիմունքներ': 'gold',
+            'Արտադրության մենեջմենթ': 'teal',
+            'Ծառայությունների ոլորտի կառավարում & Էկոնոմիկա': 'rose',
+            'Գործույթների հետազոտման մաթեմատիկական մեթոդներ': 'indigo',
+            'Ֆինանսներ': 'gold',
+            'Հոգեբանություն': 'teal',
+            'Տեղեկատվական տեխնոլոգիաներ': 'rose',
+            'Համաշխարհային տնտեսություն & Պատմություն': 'indigo',
+        };
+        const FAMILY_DARK_ACCENT = {
+            gold: 'from-amber-950/40 to-slate-900/90',
+            teal: 'from-teal-950/40 to-slate-900/90',
+            rose: 'from-rose-950/40 to-slate-900/90',
+            indigo: 'from-indigo-950/40 to-slate-900/90',
+        };
+        // Mostly plain cards with occasional wide/tall/featured ones, matching the curated bento rhythm
+        const BENTO_SPAN_CYCLE = ['', '', 'bento-wide', '', '', 'bento-tall', '', 'bento-featured', '', ''];
+
+        function getAccentForDomain(domainTitle) {
+            const fam = DOMAIN_FAMILY_MAP[domainTitle] || 'gold';
+            return FAMILY_DARK_ACCENT[fam];
+        }
+
+        // Deterministic (not random) so the same item always keeps the same size across reloads/re-syncs
+        function getBentoSpanForId(id) {
+            let h = 0;
+            for (let i = 0; i < id.length; i++) h += id.charCodeAt(i);
+            return BENTO_SPAN_CYCLE[h % BENTO_SPAN_CYCLE.length];
+        }
+
         function processImportedRows(rows, rowLinks) {
             if (!rows || rows.length === 0) {
                 showImportStatus('Ֆայլը դատարկ է կամ տվյալներ չեն գտնվել։', false);
@@ -737,7 +788,7 @@
                 const author = getField(normRow, ['Հեղինակ', 'author'], 'Անհայտ');
                 let link = getField(normRow, ['Հղում', 'link', 'url'], '');
                 const domain = getField(normRow, ['Ոլորտ', 'domain', 'կատեգորիա'], 'Տեղեկատվական տեխնոլոգիաներ');
-                const type = getField(normRow, ['Տեսակ', 'type', 'ձևաչափ'], 'գիրք');
+                const type = normalizeType(getField(normRow, ['Տեսակ', 'type', 'ձևաչափ'], 'գիրք'));
                 const description = getField(normRow, ['Նկարագրություն', 'description'], 'Ներմուծված ուսումնական նյութ։');
                 const tagsRaw = getField(normRow, ['Թեգեր', 'tags'], '');
 
@@ -774,10 +825,10 @@
                     domain,
                     type,
                     rating: 5.0,
-                    bentoSpan: '',
+                    bentoSpan: getBentoSpanForId(stableId),
                     description,
                     tags,
-                    bgAccent: 'from-emerald-950/30 to-slate-900/90'
+                    bgAccent: getAccentForDomain(domain)
                 };
 
                 if (existingIdx >= 0) {
@@ -795,6 +846,7 @@
                 renderTagPills();
                 applyFilters();
                 renderDomainsTab();
+                updateBookmarksUI();
                 let msg = `<i class="fa-solid fa-circle-check mr-1"></i> Հաջողությամբ ավելացվեց ${addedCount} նոր ռեսուրս Excel/Drive-ից:`;
                 if (skippedNoTitle > 0) {
                     msg += ` (${skippedNoTitle} տող բաց թողնվեց՝ առանց Վերնագիր/Title սյունակի արժեքի)`;
@@ -1294,6 +1346,7 @@
         let selectedTypeFilter = 'ALL';
         let selectedTagFilter = null;
         let selectedSortOrder = 'NEWEST';
+        let onlyBookmarkedFilter = false;
         let currentModalItemId = null;
         let bookmarks = JSON.parse(localStorage.getItem('alx_bookmarks') || '[]');
 
@@ -1350,9 +1403,10 @@
 
             DOMAINS_DATA.forEach(d => {
                 if (filterSelect) {
+                    const count = materialsData.filter(m => m.domain === d.title).length;
                     const opt1 = document.createElement('option');
                     opt1.value = d.title;
-                    opt1.textContent = d.title;
+                    opt1.textContent = `${d.title} (${count})`;
                     filterSelect.appendChild(opt1);
                 }
 
@@ -1392,9 +1446,28 @@
             document.getElementById('stat-books-count').textContent = booksCount;
         }
 
-        function handleSearchInput() {
-            currentSearchQuery = document.getElementById('search-input').value.trim().toLowerCase();
+        function toggleOnlyBookmarkedFilter() {
+            onlyBookmarkedFilter = !onlyBookmarkedFilter;
+            const btn = document.getElementById('only-bookmarked-btn');
+            if (onlyBookmarkedFilter) {
+                btn.classList.add('bg-gold-500/20', 'text-gold-300', 'border-gold-500/50');
+                btn.classList.remove('bg-slate-900/80', 'text-slate-400', 'border-slate-800');
+                btn.innerHTML = '<i class="fa-solid fa-bookmark"></i>Միայն Պահպանվածները';
+            } else {
+                btn.classList.remove('bg-gold-500/20', 'text-gold-300', 'border-gold-500/50');
+                btn.classList.add('bg-slate-900/80', 'text-slate-400', 'border-slate-800');
+                btn.innerHTML = '<i class="fa-regular fa-bookmark"></i>Միայն Պահպանվածները';
+            }
             applyFilters();
+        }
+
+        let searchDebounceTimer = null;
+        function handleSearchInput() {
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(() => {
+                currentSearchQuery = document.getElementById('search-input').value.trim().toLowerCase();
+                applyFilters();
+            }, 200);
         }
 
         function selectTagFilter(tag) {
@@ -1408,12 +1481,20 @@
             document.getElementById('domain-filter').value = 'ALL';
             document.getElementById('type-filter').value = 'ALL';
             document.getElementById('sort-filter').value = 'NEWEST';
-            
+
             currentSearchQuery = '';
             selectedDomainFilter = 'ALL';
             selectedTypeFilter = 'ALL';
             selectedTagFilter = null;
             selectedSortOrder = 'NEWEST';
+
+            if (onlyBookmarkedFilter) {
+                onlyBookmarkedFilter = false;
+                const btn = document.getElementById('only-bookmarked-btn');
+                btn.classList.remove('bg-gold-500/20', 'text-gold-300', 'border-gold-500/50');
+                btn.classList.add('bg-slate-900/80', 'text-slate-400', 'border-slate-800');
+                btn.innerHTML = '<i class="fa-regular fa-bookmark"></i>Միայն Պահպանվածները';
+            }
 
             renderTagPills();
             applyFilters();
@@ -1424,7 +1505,7 @@
             selectedTypeFilter = document.getElementById('type-filter').value;
             selectedSortOrder = document.getElementById('sort-filter').value;
 
-            const isFiltered = currentSearchQuery !== '' || selectedDomainFilter !== 'ALL' || selectedTypeFilter !== 'ALL' || selectedTagFilter !== null;
+            const isFiltered = currentSearchQuery !== '' || selectedDomainFilter !== 'ALL' || selectedTypeFilter !== 'ALL' || selectedTagFilter !== null || onlyBookmarkedFilter;
             document.getElementById('reset-filters-btn').style.display = isFiltered ? 'inline-flex' : 'none';
 
             let filtered = materialsData.filter(item => {
@@ -1435,10 +1516,11 @@
                     item.tags.some(t => t.toLowerCase().includes(currentSearchQuery));
 
                 const matchDomain = selectedDomainFilter === 'ALL' || item.domain === selectedDomainFilter;
-                const matchType = selectedTypeFilter === 'ALL' || item.type === selectedTypeFilter;
+                const matchType = selectedTypeFilter === 'ALL' || normalizeType(item.type) === selectedTypeFilter;
                 const matchTag = !selectedTagFilter || item.tags.includes(selectedTagFilter);
+                const matchBookmark = !onlyBookmarkedFilter || bookmarks.includes(item.id);
 
-                return matchQuery && matchDomain && matchType && matchTag;
+                return matchQuery && matchDomain && matchType && matchTag && matchBookmark;
             });
 
             if (selectedSortOrder === 'TITLE_ASC') {
@@ -1469,13 +1551,14 @@
 
             items.forEach(item => {
                 const isBookmarked = bookmarks.includes(item.id);
+                const normType = normalizeType(item.type);
 
                 let badgeIcon = 'fa-file-lines';
                 let badgeClass = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-                if (item.type === 'գիրք') {
+                if (normType === 'գիրք') {
                     badgeIcon = 'fa-book';
                     badgeClass = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-                } else if (item.type === 'տեսանյութ') {
+                } else if (normType === 'տեսանյութ') {
                     badgeIcon = 'fa-video';
                     badgeClass = 'bg-red-500/10 text-red-400 border-red-500/20';
                 }
