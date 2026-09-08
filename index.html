@@ -284,23 +284,14 @@
                 </div>
             </div>
 
-            <!-- Tags Selector -->
-            <div class="text-xs">
-                <div class="flex items-center justify-between gap-2 mb-2 flex-wrap">
-                    <span class="text-slate-500 font-medium">
-                        <i class="fa-solid fa-tags mr-1"></i>Թեգեր՝
-                        <span id="tags-total-count" class="text-slate-600"></span>
-                    </span>
-                    <div class="flex items-center gap-2">
-                        <button id="only-bookmarked-btn" onclick="toggleOnlyBookmarkedFilter()" class="px-3 py-1 rounded-full bg-slate-900/80 hover:bg-gold-500/10 text-slate-400 hover:text-gold-300 border border-slate-800 hover:border-gold-500/40 text-xs transition-all flex items-center gap-1.5">
-                            <i class="fa-regular fa-bookmark"></i>Միայն Պահպանվածները
-                        </button>
-                        <button id="reset-filters-btn" onclick="resetAllFilters()" class="hidden px-3 py-1 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs transition-all">
-                            <i class="fa-solid fa-xmark mr-1"></i>Մաքրել
-                        </button>
-                    </div>
-                </div>
-                <div id="tags-pills-container" class="flex flex-wrap items-center gap-2"></div>
+            <!-- Filter action buttons -->
+            <div class="flex items-center justify-end gap-2 flex-wrap text-xs">
+                <button id="only-bookmarked-btn" onclick="toggleOnlyBookmarkedFilter()" class="px-3 py-1.5 rounded-full bg-slate-900/80 hover:bg-gold-500/10 text-slate-400 hover:text-gold-300 border border-slate-800 hover:border-gold-500/40 text-xs transition-all flex items-center gap-1.5">
+                    <i class="fa-regular fa-bookmark"></i>Միայն Պահպանվածները
+                </button>
+                <button id="reset-filters-btn" onclick="resetAllFilters()" class="hidden px-3 py-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs transition-all">
+                    <i class="fa-solid fa-xmark mr-1"></i>Մաքրել Ֆիլտրերը
+                </button>
             </div>
         </div>
 
@@ -407,10 +398,16 @@
                     <p id="modal-item-description" class="text-slate-300 text-sm leading-relaxed bg-slate-950/60 p-4 rounded-xl border border-slate-800/80"></p>
                 </div>
 
-                <!-- Tags List -->
-                <div>
-                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Թեգեր</h4>
+                <!-- Keywords -->
+                <div id="modal-item-tags-section">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Բանալի բառեր</h4>
                     <div id="modal-item-tags" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- Additional data from spreadsheet -->
+                <div id="modal-item-extra-section" class="hidden">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Լրացուցիչ Տվյալներ</h4>
+                    <div id="modal-item-extra" class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/80"></div>
                 </div>
 
                 <!-- Academic Citation -->
@@ -765,10 +762,23 @@
            of how the type was typed in the source spreadsheet. */
         function normalizeType(raw) {
             const v = String(raw || '').trim().toLowerCase();
-            if (v.includes('տեսանյութ') || v.includes('video') || v.includes('vid')) return 'տեսանյութ';
+            if (v.includes('տեսանյութ') || v.includes('տեսադաս') || v.includes('video') || v.includes('vid')) return 'տեսանյութ';
             if (v.includes('նյութ') || v.includes('material') || v.includes('note')) return 'նյութ';
             if (v.includes('գիրք') || v.includes('book')) return 'գիրք';
             return 'գիրք';
+        }
+
+        /* True for any YouTube link (watch, playlist, youtu.be, shorts, embed, etc.) */
+        function isYouTubeLink(link) {
+            const s = String(link || '').toLowerCase();
+            return s.includes('youtube.com') || s.includes('youtu.be');
+        }
+
+        /* Authoritative type for an item: ANY YouTube link is always a "տեսանյութ / տեսադաս",
+           regardless of what the spreadsheet's type column said. Everything else follows the
+           normalized type column. */
+        function canonicalType(item) {
+            return isYouTubeLink(item && item.link) ? 'տեսանյութ' : normalizeType(item && item.type);
         }
 
         /* Rich color-family system. Each domain maps to one of 8 families; every family carries a
@@ -895,12 +905,11 @@
                 const title = getField(normRow, ['Վերնագիր', 'title', 'name', 'անվանում'], '');
                 if (!title) { skippedNoTitle++; return; }
 
-                const author = getField(normRow, ['Հեղինակ', 'author'], 'Անհայտ');
-                let link = getField(normRow, ['Հղում', 'link', 'url'], '');
-                const domain = getField(normRow, ['Ոլորտ', 'domain', 'կատեգորիա'], 'Տեղեկատվական տեխնոլոգիաներ');
-                const type = normalizeType(getField(normRow, ['Տեսակ', 'type', 'ձևաչափ'], 'գիրք'));
-                const description = getField(normRow, ['Նկարագրություն', 'description'], 'Ներմուծված ուսումնական նյութ։');
-                const tagsRaw = getField(normRow, ['Թեգեր', 'tags'], '');
+                const author = getField(normRow, ['Հեղինակ', 'author', 'աղբյուր'], 'Անհայտ');
+                let link = getField(normRow, ['Հղում', 'link', 'url', 'ссылка'], '');
+                const domain = getField(normRow, ['Ոլորտ', 'domain', 'կատեգորիա', 'category'], 'Տեղեկատվական տեխնոլոգիաներ');
+                const description = getField(normRow, ['Նկարագրություն', 'description', 'описание'], 'Ներմուծված ուսումնական նյութ։');
+                const tagsRaw = getField(normRow, ['Թեգեր', 'tags', 'թեգ', 'keywords'], '');
 
                 // If no plain-text URL was found, fall back to a real hyperlink found anywhere
                 // in this row (covers rows where the link was added via "Insert > Link" on the
@@ -910,7 +919,27 @@
                 }
                 if (!link) link = '#';
 
-                const tags = typeof tagsRaw === 'string' && tagsRaw ? tagsRaw.split(/[,;]/).map(t => t.trim()).filter(Boolean) : ['Excel'];
+                // Type: YouTube links are always videos; otherwise use the spreadsheet's type column
+                const type = canonicalType({ link, type: getField(normRow, ['Տեսակ', 'type', 'ձևաչափ', 'формат'], 'գիրք') });
+
+                // Rating: read from the sheet if present, otherwise default to 5.0
+                let rating = parseFloat(String(getField(normRow, ['Վարկանիշ', 'Գնահատական', 'rating', 'rate', 'оценка'], '')).replace(',', '.'));
+                if (!isFinite(rating) || rating <= 0) rating = 5.0;
+                if (rating > 5) rating = 5;
+
+                const tags = typeof tagsRaw === 'string' && tagsRaw ? tagsRaw.split(/[,;|]/).map(t => t.trim()).filter(Boolean) : [];
+
+                // Capture EVERY other column the spreadsheet provided, so no data is lost
+                const KNOWN_HEADERS = new Set(['վերնագիր','title','name','անվանում','հեղինակ','author','աղբյուր','հղում','link','url','ссылка','ոլորտ','domain','կատեգորիա','category','տեսակ','type','ձևաչափ','формат','նկարագրություն','description','описание','թեգեր','tags','թեգ','keywords','վարկանիշ','գնահատական','rating','rate','оценка']);
+                const extra = {};
+                Object.keys(row).forEach(origKey => {
+                    const nk = String(origKey).trim().toLowerCase();
+                    if (KNOWN_HEADERS.has(nk)) return;
+                    const val = row[origKey];
+                    if (val !== undefined && val !== null && String(val).trim() !== '') {
+                        extra[String(origKey).trim()] = String(val).trim();
+                    }
+                });
 
                 // Auto add to domains if missing
                 if (!DOMAINS_DATA.some(d => d.title === domain)) {
@@ -937,10 +966,11 @@
                     link,
                     domain,
                     type,
-                    rating: 5.0,
+                    rating,
                     bentoSpan: getBentoSpanForId(stableId),
                     description,
                     tags,
+                    extra,
                     bgAccent: getAccentForDomain(domain),
                     userAdded: true
                 };
@@ -960,7 +990,6 @@
                 rebuildMaterials();
                 populateDomainDropdowns();
                 updateStatsCounters();
-                renderTagPills();
                 applyFilters();
                 renderDomainsTab();
                 updateBookmarksUI();
@@ -1492,9 +1521,12 @@
         const BASE_KEYS = new Set(BASE_MATERIALS.map(m => itemKey(m.title, m.link)));
 
         // Rebuild the live list: saved items first (newest on top), then curated items not overridden.
+        // Every item's type is resolved to its canonical value here (YouTube => տեսանյութ) so the
+        // whole app — badges, filters, stats — is always consistent.
         function rebuildMaterials() {
             const userIds = new Set(userItems.map(i => i.id));
-            materialsData = [...userItems, ...BASE_MATERIALS.filter(b => !userIds.has(b.id))];
+            const merged = [...userItems, ...BASE_MATERIALS.filter(b => !userIds.has(b.id))];
+            materialsData = merged.map(m => ({ ...m, type: canonicalType(m) }));
         }
 
         let userItems = loadUserItems();
@@ -1506,7 +1538,6 @@
         let currentSearchQuery = '';
         let selectedDomainFilter = 'ALL';
         let selectedTypeFilter = 'ALL';
-        let selectedTagFilter = null;
         let selectedSortOrder = 'NEWEST';
         let onlyBookmarkedFilter = false;
         let currentModalItemId = null;
@@ -1514,7 +1545,6 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             populateDomainDropdowns();
-            renderTagPills();
             updateStatsCounters();
             applyFilters();
             renderDomainsTab();
@@ -1581,69 +1611,6 @@
             });
         }
 
-        let tagsExpanded = false;
-        const TAGS_COLLAPSED_LIMIT = 30;
-
-        function renderTagPills() {
-            const container = document.getElementById('tags-pills-container');
-            if (!container) return;
-            container.innerHTML = '';
-
-            // Count how many resources carry each tag, across the WHOLE library
-            const freq = new Map();
-            materialsData.forEach(m => (m.tags || []).forEach(t => {
-                const tag = String(t).trim();
-                if (!tag) return;
-                freq.set(tag, (freq.get(tag) || 0) + 1);
-            }));
-
-            // Most-used tags first, then alphabetical (Armenian-aware)
-            const tags = [...freq.keys()].sort((a, b) => {
-                const d = freq.get(b) - freq.get(a);
-                return d !== 0 ? d : a.localeCompare(b, 'hy');
-            });
-
-            const totalLabel = document.getElementById('tags-total-count');
-            if (totalLabel) totalLabel.textContent = `(${tags.length})`;
-
-            const showAll = tagsExpanded || tags.length <= TAGS_COLLAPSED_LIMIT;
-            let visible = showAll ? tags : tags.slice(0, TAGS_COLLAPSED_LIMIT);
-
-            // Keep the active tag visible even if it sits past the collapsed limit
-            if (selectedTagFilter && freq.has(selectedTagFilter) && !visible.includes(selectedTagFilter)) {
-                visible = [selectedTagFilter, ...visible];
-            }
-
-            visible.forEach(tag => {
-                const active = selectedTagFilter === tag;
-                const btn = document.createElement('button');
-                btn.type = 'button';
-                btn.onclick = () => selectTagFilter(tag);
-                btn.className = `px-3 py-1 rounded-full text-xs font-medium transition-all inline-flex items-center gap-1.5 ${
-                    active
-                        ? 'bg-gold-500 text-slate-950 font-bold shadow-md shadow-gold-500/20'
-                        : 'bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/50 hover:border-gold-500/40'
-                }`;
-                btn.innerHTML = `<span>#${tag}</span><span class="${active ? 'text-slate-900/70' : 'text-slate-500'} text-[10px] font-semibold">${freq.get(tag)}</span>`;
-                container.appendChild(btn);
-            });
-
-            if (tags.length > TAGS_COLLAPSED_LIMIT) {
-                const toggle = document.createElement('button');
-                toggle.type = 'button';
-                toggle.onclick = () => { tagsExpanded = !tagsExpanded; renderTagPills(); };
-                toggle.className = 'px-3 py-1 rounded-full text-xs font-semibold bg-gold-500/10 text-gold-300 border border-gold-500/30 hover:bg-gold-500/20 transition-all';
-                toggle.innerHTML = tagsExpanded
-                    ? '<i class="fa-solid fa-chevron-up mr-1"></i>Պակաս ցույց տալ'
-                    : `<i class="fa-solid fa-chevron-down mr-1"></i>Բոլոր թեգերը (+${tags.length - TAGS_COLLAPSED_LIMIT})`;
-                container.appendChild(toggle);
-            }
-
-            if (tags.length === 0) {
-                container.innerHTML = '<span class="text-slate-600 italic">Թեգեր չկան</span>';
-            }
-        }
-
         function updateStatsCounters() {
             document.getElementById('stat-total-items').textContent = materialsData.length;
             document.getElementById('stat-total-domains').textContent = DOMAINS_DATA.length;
@@ -1675,24 +1642,6 @@
             }, 200);
         }
 
-        /* Central hashtag handler used everywhere (filter bar, cards, detail modal, domain cards).
-           `jump` = the click came from outside the filter bar, so close the modal, switch to the
-           materials view and scroll up to show the filtered results. */
-        function selectTagFilter(tag, jump) {
-            tag = String(tag).trim();
-            if (jump) closeDetailModal();
-            if (activeTab !== 'materials') switchTab('materials');
-
-            selectedTagFilter = (selectedTagFilter === tag) ? null : tag;
-            renderTagPills();
-            applyFilters();
-
-            if (jump && selectedTagFilter) {
-                const el = document.getElementById('filter-controls-container');
-                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }
-
         function resetAllFilters() {
             document.getElementById('search-input').value = '';
             document.getElementById('domain-filter').value = 'ALL';
@@ -1702,7 +1651,6 @@
             currentSearchQuery = '';
             selectedDomainFilter = 'ALL';
             selectedTypeFilter = 'ALL';
-            selectedTagFilter = null;
             selectedSortOrder = 'NEWEST';
 
             if (onlyBookmarkedFilter) {
@@ -1713,7 +1661,6 @@
                 btn.innerHTML = '<i class="fa-regular fa-bookmark"></i>Միայն Պահպանվածները';
             }
 
-            renderTagPills();
             applyFilters();
         }
 
@@ -1722,22 +1669,24 @@
             selectedTypeFilter = document.getElementById('type-filter').value;
             selectedSortOrder = document.getElementById('sort-filter').value;
 
-            const isFiltered = currentSearchQuery !== '' || selectedDomainFilter !== 'ALL' || selectedTypeFilter !== 'ALL' || selectedTagFilter !== null || onlyBookmarkedFilter;
+            const isFiltered = currentSearchQuery !== '' || selectedDomainFilter !== 'ALL' || selectedTypeFilter !== 'ALL' || onlyBookmarkedFilter;
             document.getElementById('reset-filters-btn').style.display = isFiltered ? 'inline-flex' : 'none';
 
+            const q = currentSearchQuery;
             let filtered = materialsData.filter(item => {
-                const matchQuery = currentSearchQuery === '' ||
-                    item.title.toLowerCase().includes(currentSearchQuery) ||
-                    item.author.toLowerCase().includes(currentSearchQuery) ||
-                    item.description.toLowerCase().includes(currentSearchQuery) ||
-                    item.tags.some(t => t.toLowerCase().includes(currentSearchQuery));
+                const matchQuery = q === '' ||
+                    (item.title || '').toLowerCase().includes(q) ||
+                    (item.author || '').toLowerCase().includes(q) ||
+                    (item.description || '').toLowerCase().includes(q) ||
+                    (item.domain || '').toLowerCase().includes(q) ||
+                    (Array.isArray(item.tags) && item.tags.some(t => String(t).toLowerCase().includes(q)));
 
                 const matchDomain = selectedDomainFilter === 'ALL' || item.domain === selectedDomainFilter;
-                const matchType = selectedTypeFilter === 'ALL' || normalizeType(item.type) === selectedTypeFilter;
-                const matchTag = !selectedTagFilter || item.tags.includes(selectedTagFilter);
+                // item.type is already canonical (books / materials / videos, YouTube forced to video)
+                const matchType = selectedTypeFilter === 'ALL' || item.type === selectedTypeFilter;
                 const matchBookmark = !onlyBookmarkedFilter || bookmarks.includes(item.id);
 
-                return matchQuery && matchDomain && matchType && matchTag && matchBookmark;
+                return matchQuery && matchDomain && matchType && matchBookmark;
             });
 
             if (selectedSortOrder === 'TITLE_ASC') {
@@ -1795,17 +1744,8 @@
                     ? `<button onclick="event.stopPropagation(); deleteUserItem('${item.id}')" title="Ջնջել" class="text-slate-500 hover:text-red-400 p-1 transition-colors"><i class="fa-solid fa-trash-can text-xs"></i></button>`
                     : '';
 
-                // Show clickable hashtags on the taller cards (they have the vertical room)
-                const showCardTags = isTall && Array.isArray(item.tags) && item.tags.length > 0;
-                const descClamp = isLarge ? (showCardTags ? 'line-clamp-4' : 'line-clamp-6')
-                    : isTall ? (showCardTags ? 'line-clamp-3' : 'line-clamp-5')
-                    : 'line-clamp-2';
-                const tagChips = showCardTags
-                    ? `<div class="mt-3 flex flex-wrap gap-1.5">${item.tags.map(t => {
-                            const st = String(t).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-                            return `<button type="button" onclick="event.stopPropagation(); selectTagFilter('${st}')" class="px-2 py-0.5 rounded-md bg-slate-950/50 hover:bg-gold-500 hover:text-slate-950 text-slate-300 text-[10px] font-medium border border-slate-700/60 hover:border-gold-500 transition-all">#${t}</button>`;
-                        }).join('')}</div>`
-                    : '';
+                // Larger cards have more vertical room, so let the description breathe
+                const descClamp = isLarge ? 'line-clamp-6' : isTall ? 'line-clamp-5' : 'line-clamp-2';
 
                 card.innerHTML = `
                     <div class="absolute -right-10 -bottom-10 w-40 h-40 ${fam.glow} rounded-full blur-2xl transition-all duration-500"></div>
@@ -1838,8 +1778,6 @@
                         <p class="text-xs text-slate-300/80 mt-3 ${descClamp} font-sans leading-relaxed border-l-2 ${fam.accentBar} pl-2.5 py-0.5">
                             ${item.description}
                         </p>
-
-                        ${tagChips}
                     </div>
 
                     <div class="relative z-10 mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] gap-2">
@@ -1868,13 +1806,15 @@
                 const fam = getFamily(dom.title);
                 const safeTitle = dom.title.replace(/'/g, "\\'");
 
-                // Real, clickable tags = tags actually used by items in this domain (so a click
-                // never lands on 0 results). Fall back to the curated labels only when the domain
-                // has no items yet, shown as plain non-clickable hints.
-                const realTags = [...new Set(domItems.flatMap(m => m.tags || []).map(t => String(t).trim()).filter(Boolean))];
-                const tagsHtml = realTags.length
-                    ? realTags.map(t => { const st = String(t).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); return `<button type="button" onclick="selectTagFilter('${st}', true)" class="px-2 py-0.5 rounded bg-slate-950/60 hover:bg-gold-500 hover:text-slate-950 text-slate-300 text-[11px] border border-slate-800 hover:border-gold-500 transition-all cursor-pointer">#${t}</button>`; }).join('')
-                    : dom.tags.map(t => `<span class="px-2 py-0.5 rounded bg-slate-950/40 text-slate-500 text-[11px] border border-slate-800/60">#${t}</span>`).join('');
+                // Break the domain's resource count down by format for a richer summary line
+                const nBooks = domItems.filter(m => m.type === 'գիրք').length;
+                const nMats = domItems.filter(m => m.type === 'նյութ').length;
+                const nVids = domItems.filter(m => m.type === 'տեսանյութ').length;
+                const breakdown = [
+                    nBooks ? `<span class="inline-flex items-center gap-1"><i class="fa-solid fa-book text-emerald-400 text-[10px]"></i>${nBooks}</span>` : '',
+                    nMats ? `<span class="inline-flex items-center gap-1"><i class="fa-solid fa-file-lines text-amber-400 text-[10px]"></i>${nMats}</span>` : '',
+                    nVids ? `<span class="inline-flex items-center gap-1"><i class="fa-solid fa-video text-red-400 text-[10px]"></i>${nVids}</span>` : ''
+                ].filter(Boolean).join('<span class="text-slate-700 mx-0.5">·</span>');
 
                 const card = document.createElement('div');
                 card.className = `card-in rounded-2xl p-6 bg-gradient-to-br ${fam.domGrad} bg-slate-900/90 border ${fam.domBorder} ${fam.border} hover:-translate-y-0.5 transition-all duration-300 shadow-xl ${fam.shadow} flex flex-col justify-between`;
@@ -1894,12 +1834,12 @@
                         <h3 class="text-lg font-serif font-bold text-slate-100">${dom.title}</h3>
                         <p class="text-xs text-slate-400 mt-2 leading-relaxed">${dom.description}</p>
 
-                        <div class="mt-4 pt-3 border-t border-slate-800">
-                            <span class="text-[11px] uppercase tracking-wider text-slate-500 font-semibold block mb-2">Թեգեր՝</span>
-                            <div class="flex flex-wrap gap-1.5">
-                                ${tagsHtml}
+                        ${breakdown ? `<div class="mt-4 pt-3 border-t border-slate-800">
+                            <span class="text-[11px] uppercase tracking-wider text-slate-500 font-semibold block mb-2">Ըստ Ձևաչափի՝</span>
+                            <div class="flex flex-wrap items-center gap-3 text-xs text-slate-300">
+                                ${breakdown}
                             </div>
-                        </div>
+                        </div>` : ''}
                     </div>
 
                     <button onclick="filterByDomainFromCard('${safeTitle}')" class="mt-6 w-full py-2.5 rounded-xl ${fam.link} border text-xs font-bold transition-all flex items-center justify-center space-x-2">
@@ -1972,17 +1912,42 @@
             linkBtn.href = item.link || '#';
             document.getElementById('modal-item-url-text').textContent = item.link || 'Հղում առկա չէ';
 
+            // Keywords (from the spreadsheet's tags column) — informational chips, no filtering
+            const tagsWrap = document.getElementById('modal-item-tags-section');
             const tagsContainer = document.getElementById('modal-item-tags');
             tagsContainer.innerHTML = '';
-            item.tags.forEach(t => {
-                const tagBtn = document.createElement('button');
-                tagBtn.type = 'button';
-                tagBtn.onclick = () => selectTagFilter(t, true);
-                tagBtn.title = `Զտել ըստ #${t}`;
-                tagBtn.className = "px-2.5 py-1 rounded-md bg-slate-800 text-gold-400 hover:bg-gold-500 hover:text-slate-950 text-xs font-mono border border-slate-700 hover:border-gold-500 transition-all cursor-pointer";
-                tagBtn.textContent = `#${t}`;
-                tagsContainer.appendChild(tagBtn);
-            });
+            const tagList = Array.isArray(item.tags) ? item.tags.filter(t => String(t).trim()) : [];
+            if (tagList.length) {
+                if (tagsWrap) tagsWrap.classList.remove('hidden');
+                tagList.forEach(t => {
+                    const chip = document.createElement('span');
+                    chip.className = "px-2.5 py-1 rounded-md bg-slate-800 text-slate-200 text-xs border border-slate-700";
+                    chip.textContent = t;
+                    tagsContainer.appendChild(chip);
+                });
+            } else if (tagsWrap) {
+                tagsWrap.classList.add('hidden');
+            }
+
+            // Any additional columns the spreadsheet provided (beyond the standard ones)
+            const extraWrap = document.getElementById('modal-item-extra-section');
+            const extraContainer = document.getElementById('modal-item-extra');
+            if (extraContainer) {
+                extraContainer.innerHTML = '';
+                const extra = item.extra && typeof item.extra === 'object' ? item.extra : {};
+                const keys = Object.keys(extra);
+                if (keys.length) {
+                    if (extraWrap) extraWrap.classList.remove('hidden');
+                    keys.forEach(k => {
+                        const row = document.createElement('div');
+                        row.className = "flex gap-2 text-xs py-1 border-b border-slate-800/60 last:border-0";
+                        row.innerHTML = `<span class="text-slate-400 font-semibold shrink-0">${k}:</span><span class="text-slate-200 break-words">${String(extra[k])}</span>`;
+                        extraContainer.appendChild(row);
+                    });
+                } else if (extraWrap) {
+                    extraWrap.classList.add('hidden');
+                }
+            }
 
             const citation = `${item.author || 'Անհայտ'}. "${item.title}". Ոլորտ՝ ${item.domain}. Ալեքսանդրիայի Թվային Արխիվ, URL: ${item.link}`;
             document.getElementById('modal-item-citation').textContent = citation;
@@ -2120,7 +2085,7 @@
             const description = document.getElementById('add-description').value.trim();
             const tagsInput = document.getElementById('add-tags').value.trim();
 
-            const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(Boolean) : ['Ռեսուրս'];
+            const tags = tagsInput ? tagsInput.split(/[,;|]/).map(t => t.trim()).filter(Boolean) : [];
 
             const newId = `ALX-USER-${Date.now().toString(36)}`;
             const newItem = {
@@ -2144,7 +2109,6 @@
 
             populateDomainDropdowns();
             updateStatsCounters();
-            renderTagPills();
             applyFilters();
             renderDomainsTab();
             updateBookmarksUI();
@@ -2173,7 +2137,6 @@
 
             populateDomainDropdowns();
             updateStatsCounters();
-            renderTagPills();
             applyFilters();
             renderDomainsTab();
             updateBookmarksUI();
