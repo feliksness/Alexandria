@@ -207,21 +207,6 @@
                     </p>
                 </div>
 
-                <!-- Stats Counters -->
-                <div class="grid grid-cols-3 gap-3 sm:gap-4 shrink-0">
-                    <div class="p-3 sm:p-4 rounded-xl bg-slate-950/70 border border-slate-800 text-center">
-                        <div id="stat-total-items" class="text-2xl sm:text-3xl font-bold text-gold-400 font-serif">0</div>
-                        <div class="text-[11px] sm:text-xs text-slate-400 mt-1">Բոլոր Նյութերը</div>
-                    </div>
-                    <div class="p-3 sm:p-4 rounded-xl bg-slate-950/70 border border-slate-800 text-center">
-                        <div id="stat-total-domains" class="text-2xl sm:text-3xl font-bold text-amber-400 font-serif">0</div>
-                        <div class="text-[11px] sm:text-xs text-slate-400 mt-1">Ոլորտներ</div>
-                    </div>
-                    <div class="p-3 sm:p-4 rounded-xl bg-slate-950/70 border border-slate-800 text-center">
-                        <div id="stat-books-count" class="text-2xl sm:text-3xl font-bold text-yellow-500 font-serif">0</div>
-                        <div class="text-[11px] sm:text-xs text-slate-400 mt-1">Դասագրքեր</div>
-                    </div>
-                </div>
             </div>
         </div>
     </section>
@@ -1653,10 +1638,12 @@
         }
 
         function updateStatsCounters() {
-            document.getElementById('stat-total-items').textContent = materialsData.length;
-            document.getElementById('stat-total-domains').textContent = DOMAINS_DATA.length;
-            const booksCount = materialsData.filter(m => m.type === 'գիրք').length;
-            document.getElementById('stat-books-count').textContent = booksCount;
+            const t = document.getElementById('stat-total-items');
+            const d = document.getElementById('stat-total-domains');
+            const b = document.getElementById('stat-books-count');
+            if (t) t.textContent = materialsData.length;
+            if (d) d.textContent = DOMAINS_DATA.length;
+            if (b) b.textContent = materialsData.filter(m => m.type === 'գիրք').length;
         }
 
         function toggleOnlyBookmarkedFilter() {
@@ -1815,6 +1802,11 @@
 
             const descClamp = isLarge ? 'line-clamp-6' : isTall ? 'line-clamp-5' : 'line-clamp-2';
 
+            // Only items pulled from the internet can be deleted from the library
+            const deleteBtn = item.fromWeb
+                ? `<button onclick="event.stopPropagation(); deleteUserItem('${item.id}')" title="Ջնջել գրադարանից" class="text-slate-500 hover:text-red-400 p-1 transition-colors"><i class="fa-solid fa-trash-can text-xs"></i></button>`
+                : '';
+
             card.innerHTML = `
                 <div class="absolute -right-10 -bottom-10 w-40 h-40 ${fam.glow} rounded-full blur-2xl transition-all duration-500"></div>
 
@@ -1827,6 +1819,7 @@
                             <span class="text-xs text-yellow-400 font-bold flex items-center">
                                 <i class="fa-solid fa-star text-[10px] mr-1"></i>${item.rating}
                             </span>
+                            ${deleteBtn}
                             <button onclick="event.stopPropagation(); toggleBookmark('${item.id}')" class="text-slate-500 hover:text-gold-400 p-1 transition-colors">
                                 <i class="${isBookmarked ? 'fa-solid fa-bookmark text-gold-400' : 'fa-regular fa-bookmark'}"></i>
                             </button>
@@ -2216,6 +2209,8 @@
             applyFilters();
             renderDomainsTab();
             updateBookmarksUI();
+            // If online results are on screen, refresh them so a deleted item's card shows "+" again
+            if (onlineResults && onlineResults.length) renderOnlineResults(onlineResults);
             showToast('Ռեսուրսը ջնջվեց', 'warning');
         }
 
