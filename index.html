@@ -239,10 +239,6 @@
                     <i class="fa-solid fa-shapes"></i>
                     <span>Ոլորտներ</span>
                 </button>
-                <button id="tab-discover" onclick="switchTab('discover')" class="flex items-center space-x-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
-                    <i class="fa-solid fa-globe"></i>
-                    <span>Առցանց Որոնում</span>
-                </button>
             </div>
 
             <div id="found-badge-wrap" class="text-xs text-slate-400 flex items-center space-x-2">
@@ -291,12 +287,28 @@
 
             <!-- Filter action buttons -->
             <div class="flex items-center justify-end gap-2 flex-wrap text-xs">
+                <button onclick="toggleCitationBox()" id="citation-toggle-btn" class="px-3 py-1.5 rounded-full bg-slate-900/80 hover:bg-gold-500/10 text-slate-400 hover:text-gold-300 border border-slate-800 hover:border-gold-500/40 text-xs transition-all flex items-center gap-1.5 mr-auto">
+                    <i class="fa-solid fa-quote-right"></i>Ավելացնել մեջբերումով
+                </button>
                 <button id="only-bookmarked-btn" onclick="toggleOnlyBookmarkedFilter()" class="px-3 py-1.5 rounded-full bg-slate-900/80 hover:bg-gold-500/10 text-slate-400 hover:text-gold-300 border border-slate-800 hover:border-gold-500/40 text-xs transition-all flex items-center gap-1.5">
                     <i class="fa-regular fa-bookmark"></i>Միայն Պահպանվածները
                 </button>
                 <button id="reset-filters-btn" onclick="resetAllFilters()" class="hidden px-3 py-1.5 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs transition-all">
                     <i class="fa-solid fa-xmark mr-1"></i>Մաքրել Ֆիլտրերը
                 </button>
+            </div>
+
+            <!-- Add by citation: paste the citation text and it is parsed back into a box -->
+            <div id="citation-box" class="hidden">
+                <label class="block text-[11px] text-slate-400 mb-1.5">
+                    <i class="fa-solid fa-circle-info text-gold-400 mr-1"></i>Տեղադրեք մեջբերումը (կարող եք մի քանի տող)՝
+                </label>
+                <textarea id="citation-input" rows="2" placeholder='Անհայտ. "Միջազգային գիտաժողովի նյութեր". Ոլորտ՝ Միջազգային տնտեսագիտություն. Ալեքսանդրիայի Թվային Արխիվ, URL: https://doi.org/10.54503/978-9939-970-08-0' class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-100 placeholder-slate-600 text-xs focus:outline-none focus:border-gold-500 transition-all font-mono leading-relaxed"></textarea>
+                <div class="flex justify-end mt-2">
+                    <button onclick="addByCitation()" class="px-5 py-2 rounded-lg bg-gold-600 hover:bg-gold-500 text-slate-950 text-xs font-bold transition-all">
+                        <i class="fa-solid fa-plus mr-1"></i>Ավելացնել գրադարանում
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -315,6 +327,26 @@
                     Մաքրել Ֆիլտրերը
                 </button>
             </div>
+
+            <!-- Lazy-load sentinel + manual fallback (renders cards in batches to save memory) -->
+            <div id="grid-sentinel" class="h-2 w-full"></div>
+            <div id="grid-loadmore" class="hidden text-center mt-5">
+                <button onclick="renderNextGridBatch()" class="px-5 py-2.5 rounded-xl bg-slate-900/80 border border-slate-700 text-slate-200 text-sm font-semibold hover:border-gold-500/50 transition-all">
+                    <i class="fa-solid fa-chevron-down mr-1.5"></i>Ցույց տալ ավելին
+                </button>
+            </div>
+
+            <!-- Integrated online results (appear AFTER local data, from the internet) -->
+            <div id="online-search-block" class="hidden mt-12">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="h-px flex-1 bg-slate-800"></div>
+                    <span class="text-xs uppercase tracking-wider text-slate-400 font-bold flex items-center gap-2"><i class="fa-solid fa-globe text-gold-400"></i>Ինտերնետից</span>
+                    <div class="h-px flex-1 bg-slate-800"></div>
+                </div>
+                <div id="online-trigger" class="text-center"></div>
+                <div id="online-status" class="hidden text-center py-6 text-sm text-slate-400"></div>
+                <div id="online-results-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mt-4"></div>
+            </div>
         </div>
 
         <!-- VIEW 2: Domains Tab -->
@@ -325,65 +357,6 @@
             </div>
 
             <div id="domains-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-        </div>
-
-        <!-- VIEW 3: Online Discover (LIGHT themed) -->
-        <div id="view-discover-container" class="hidden">
-            <div class="rounded-3xl bg-[#faf7ef] text-slate-800 border border-amber-200 shadow-xl p-5 sm:p-7">
-
-                <!-- Header -->
-                <div class="flex items-start gap-3 mb-5">
-                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-gold-400 to-amber-600 flex items-center justify-center text-white text-xl shadow-md shrink-0">
-                        <i class="fa-solid fa-earth-europe"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-xl sm:text-2xl font-serif font-bold text-slate-900">Առցանց Ակադեմիական Որոնում</h3>
-                        <p class="text-sm text-slate-500 mt-0.5">Գտեք գրքեր, դասագրքեր և գիտական հոդվածներ ամբողջ ինտերնետից՝ ըստ ձեր ոլորտների, և ավելացրեք ուղիղ ձեր գրադարանում։</p>
-                    </div>
-                </div>
-
-                <!-- Thematic quick picks -->
-                <div class="mb-4">
-                    <span class="text-[11px] uppercase tracking-wider text-slate-400 font-bold block mb-2">Թեմատիկ որոնում ըստ ոլորտի՝</span>
-                    <div id="discover-domain-chips" class="flex flex-wrap gap-2"></div>
-                </div>
-
-                <!-- Search controls -->
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-3 mb-3">
-                    <div class="md:col-span-6 relative">
-                        <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                        <input type="text" id="discover-query" onkeydown="if(event.key==='Enter'){runDiscoverSearch();}" placeholder="Որոնել վերնագրով, հեղինակով, թեմայով (անգլերեն/ռուսերեն)..." class="w-full pl-11 pr-4 py-3 rounded-xl bg-white border border-slate-300 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500 text-sm transition-all">
-                    </div>
-                    <div class="md:col-span-3">
-                        <select id="discover-source" class="w-full px-4 py-3 rounded-xl bg-white border border-slate-300 text-slate-700 text-sm focus:outline-none focus:border-gold-500 transition-all cursor-pointer">
-                            <option value="all">Բոլորը (Գրքեր + Հոդվածներ)</option>
-                            <option value="books">Միայն Գրքեր</option>
-                            <option value="articles">Միայն Հոդվածներ</option>
-                        </select>
-                    </div>
-                    <div class="md:col-span-3">
-                        <button onclick="runDiscoverSearch()" class="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-gold-500 to-amber-600 hover:from-gold-400 hover:to-amber-500 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-magnifying-glass"></i><span>Որոնել</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- File-under domain -->
-                <div class="flex items-center gap-2 flex-wrap mb-5 text-xs text-slate-500">
-                    <i class="fa-solid fa-folder-tree text-gold-500"></i>
-                    <span>Ավելացնել ոլորտում՝</span>
-                    <select id="discover-file-domain" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 text-xs focus:outline-none focus:border-gold-500 cursor-pointer max-w-full"></select>
-                </div>
-
-                <!-- Status / results -->
-                <div id="discover-status" class="hidden text-sm text-center py-10"></div>
-                <div id="discover-results" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-
-                <p class="mt-6 text-[11px] text-slate-400 leading-relaxed border-t border-amber-200/70 pt-3">
-                    <i class="fa-solid fa-circle-info mr-1 text-gold-500"></i>
-                    Աղբյուրներ՝ <strong>Open Library</strong> և <strong>Google Books</strong> (գրքեր), <strong>Crossref</strong> (գիտական հոդվածներ)։ Բոլորը անվճար, բաց հասանելիությամբ ակադեմիական բազաներ են։
-                </p>
-            </div>
         </div>
 
     </main>
@@ -868,6 +841,7 @@
             'Համաշխարհային տնտեսություն & Պատմություն': 'sky',
         };
 
+        /* Card palette — the site's own dark golden style, one colored family per domain. */
         const FAMILY = {
             gold: {
                 grad: 'from-amber-950/55 via-slate-900/95 to-slate-950', border: 'hover:border-amber-500/60',
@@ -1767,103 +1741,127 @@
             renderMaterialsGrid(filtered);
         }
 
+        /* ---- Lazy, batched grid rendering: keeps the live DOM small (≈ one screen of
+               cards at a time) instead of building every card up front, which is what
+               was using so much memory. More cards render as you scroll. ---- */
+        let gridItems = [];
+        let gridShown = 0;
+        const GRID_BATCH = 12;
+        let gridObserver = null;
+
         function renderMaterialsGrid(items) {
             const grid = document.getElementById('materials-bento-grid');
             const emptyState = document.getElementById('empty-state');
             grid.innerHTML = '';
+            gridItems = items;
+            gridShown = 0;
 
-            if (items.length === 0) {
-                grid.classList.add('hidden');
-                emptyState.classList.remove('hidden');
-                emptyState.classList.add('flex');
-                return;
-            }
+            const empty = !items || items.length === 0;
+            grid.classList.toggle('hidden', empty);
+            emptyState.classList.toggle('hidden', !empty);
+            emptyState.classList.toggle('flex', empty);
 
-            grid.classList.remove('hidden');
-            emptyState.classList.add('hidden');
-            emptyState.classList.remove('flex');
+            if (!empty) renderNextGridBatch();
+            else document.getElementById('grid-loadmore').classList.add('hidden');
 
-            items.forEach((item, i) => {
-                const isBookmarked = bookmarks.includes(item.id);
-                const normType = normalizeType(item.type);
-                const fam = getFamily(item.domain);
-                const span = getBentoSpanForId(item.id);
-                const isLarge = span.includes('featured') || span.includes('hero');
-                const isTall = span.includes('tall') || isLarge;
-                const safeLink = (item.link || '#').replace(/'/g, "\\'");
+            setupGridObserver();
+            updateOnlineSearchPrompt();
+        }
 
-                let badgeIcon = 'fa-file-lines';
-                let badgeClass = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
-                if (normType === 'գիրք') {
-                    badgeIcon = 'fa-book';
-                    badgeClass = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
-                } else if (normType === 'տեսանյութ') {
-                    badgeIcon = 'fa-video';
-                    badgeClass = 'bg-red-500/10 text-red-400 border-red-500/20';
-                } else if (normType === 'հոդված') {
-                    badgeIcon = 'fa-newspaper';
-                    badgeClass = 'bg-sky-500/10 text-sky-400 border-sky-500/20';
-                }
+        function renderNextGridBatch() {
+            const grid = document.getElementById('materials-bento-grid');
+            const slice = gridItems.slice(gridShown, gridShown + GRID_BATCH);
+            const frag = document.createDocumentFragment();
+            slice.forEach((item, k) => frag.appendChild(buildMaterialCard(item, gridShown + k)));
+            grid.appendChild(frag);
+            gridShown += slice.length;
+            document.getElementById('grid-loadmore').classList.toggle('hidden', gridShown >= gridItems.length);
+        }
 
-                const card = document.createElement('div');
-                card.className = `group card-in relative rounded-2xl p-5 bg-gradient-to-br ${fam.grad} border border-slate-800/80 ${fam.border} shadow-xl hover:shadow-2xl ${fam.shadow} hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer ${span}`;
-                card.style.animationDelay = Math.min(i * 35, 420) + 'ms';
+        function setupGridObserver() {
+            const sentinel = document.getElementById('grid-sentinel');
+            if (!sentinel || !('IntersectionObserver' in window)) return;
+            if (gridObserver) gridObserver.disconnect();
+            gridObserver = new IntersectionObserver(entries => {
+                entries.forEach(e => {
+                    if (e.isIntersecting && gridShown < gridItems.length) renderNextGridBatch();
+                });
+            }, { rootMargin: '600px' });
+            gridObserver.observe(sentinel);
+        }
 
-                card.onclick = () => openDetailModal(item.id);
+        function typeBadgeDark(normType) {
+            if (normType === 'գիրք') return { icon: 'fa-book', cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' };
+            if (normType === 'տեսանյութ') return { icon: 'fa-video', cls: 'bg-red-500/10 text-red-400 border-red-500/20' };
+            if (normType === 'հոդված') return { icon: 'fa-newspaper', cls: 'bg-sky-500/10 text-sky-400 border-sky-500/20' };
+            return { icon: 'fa-file-lines', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20' };
+        }
 
-                const deleteBtn = item.userAdded
-                    ? `<button onclick="event.stopPropagation(); deleteUserItem('${item.id}')" title="Ջնջել" class="text-slate-500 hover:text-red-400 p-1 transition-colors"><i class="fa-solid fa-trash-can text-xs"></i></button>`
-                    : '';
+        // Builds ONE library card element (site's dark style; called lazily, in batches)
+        function buildMaterialCard(item, i) {
+            const isBookmarked = bookmarks.includes(item.id);
+            const normType = normalizeType(item.type);
+            const fam = getFamily(item.domain);
+            const span = getBentoSpanForId(item.id);
+            const isLarge = span.includes('featured') || span.includes('hero');
+            const isTall = span.includes('tall') || isLarge;
+            const safeLink = (item.link || '#').replace(/'/g, "\\'");
+            const badge = typeBadgeDark(normType);
 
-                // Larger cards have more vertical room, so let the description breathe
-                const descClamp = isLarge ? 'line-clamp-6' : isTall ? 'line-clamp-5' : 'line-clamp-2';
+            const card = document.createElement('div');
+            card.className = `group card-in relative rounded-2xl p-5 bg-gradient-to-br ${fam.grad} border border-slate-800/80 ${fam.border} shadow-xl hover:shadow-2xl ${fam.shadow} hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer ${span}`;
+            card.style.animationDelay = Math.min((i % GRID_BATCH) * 35, 420) + 'ms';
+            card.onclick = () => openDetailModal(item.id);
 
-                card.innerHTML = `
-                    <div class="absolute -right-10 -bottom-10 w-40 h-40 ${fam.glow} rounded-full blur-2xl transition-all duration-500"></div>
+            const deleteBtn = item.userAdded
+                ? `<button onclick="event.stopPropagation(); deleteUserItem('${item.id}')" title="Ջնջել" class="text-slate-500 hover:text-red-400 p-1 transition-colors"><i class="fa-solid fa-trash-can text-xs"></i></button>`
+                : '';
+            const descClamp = isLarge ? 'line-clamp-6' : isTall ? 'line-clamp-5' : 'line-clamp-2';
 
-                    <div class="relative z-10">
-                        <div class="flex items-center justify-between mb-3">
-                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${badgeClass} capitalize flex items-center gap-1.5">
-                                <i class="fa-solid ${badgeIcon} text-[10px]"></i> ${item.type}
-                            </span>
-                            <div class="flex items-center space-x-1.5">
-                                <span class="text-xs text-yellow-400 font-bold flex items-center">
-                                    <i class="fa-solid fa-star text-[10px] mr-1"></i>${item.rating}
-                                </span>
-                                ${deleteBtn}
-                                <button onclick="event.stopPropagation(); toggleBookmark('${item.id}')" class="text-slate-500 hover:text-gold-400 p-1 transition-colors">
-                                    <i class="${isBookmarked ? 'fa-solid fa-bookmark text-gold-400' : 'fa-regular fa-bookmark'}"></i>
-                                </button>
-                            </div>
-                        </div>
+            card.innerHTML = `
+                <div class="absolute -right-10 -bottom-10 w-40 h-40 ${fam.glow} rounded-full blur-2xl transition-all duration-500"></div>
 
-                        <h3 class="${isLarge ? 'text-xl sm:text-2xl' : 'text-base sm:text-lg'} font-serif font-bold text-slate-100 ${fam.title} transition-colors ${isLarge ? 'line-clamp-3' : 'line-clamp-2'}">
-                            ${item.title}
-                        </h3>
-
-                        <p class="text-xs text-slate-400 mt-1.5 flex items-center">
-                            <i class="fa-solid fa-user-pen ${fam.dot} mr-1.5 text-[10px]"></i>
-                            <span class="truncate">${item.author || 'Անհայտ'}</span>
-                        </p>
-
-                        <p class="text-xs text-slate-300/80 mt-3 ${descClamp} font-sans leading-relaxed border-l-2 ${fam.accentBar} pl-2.5 py-0.5">
-                            ${item.description}
-                        </p>
-                    </div>
-
-                    <div class="relative z-10 mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] gap-2">
-                        <span class="text-slate-400 truncate flex-1 min-w-0">
-                            <i class="fa-solid fa-folder ${fam.dot} mr-1"></i>${item.domain}
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${badge.cls} capitalize flex items-center gap-1.5">
+                            <i class="fa-solid ${badge.icon} text-[10px]"></i> ${item.type}
                         </span>
-                        <a href="${item.link}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation(); return handleResourceLinkClick(event, '${safeLink}')" class="shrink-0 px-2.5 py-1 rounded-lg ${fam.link} border font-semibold transition-all inline-flex items-center space-x-1">
-                            <span>Հղում</span>
-                            <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
-                        </a>
+                        <div class="flex items-center space-x-1.5">
+                            <span class="text-xs text-yellow-400 font-bold flex items-center">
+                                <i class="fa-solid fa-star text-[10px] mr-1"></i>${item.rating}
+                            </span>
+                            ${deleteBtn}
+                            <button onclick="event.stopPropagation(); toggleBookmark('${item.id}')" class="text-slate-500 hover:text-gold-400 p-1 transition-colors">
+                                <i class="${isBookmarked ? 'fa-solid fa-bookmark text-gold-400' : 'fa-regular fa-bookmark'}"></i>
+                            </button>
+                        </div>
                     </div>
-                `;
 
-                grid.appendChild(card);
-            });
+                    <h3 class="${isLarge ? 'text-xl sm:text-2xl' : 'text-base sm:text-lg'} font-serif font-bold text-slate-100 ${fam.title} transition-colors ${isLarge ? 'line-clamp-3' : 'line-clamp-2'}">
+                        ${item.title}
+                    </h3>
+
+                    <p class="text-xs text-slate-400 mt-1.5 flex items-center">
+                        <i class="fa-solid fa-user-pen ${fam.dot} mr-1.5 text-[10px]"></i>
+                        <span class="truncate">${item.author || 'Անհայտ'}</span>
+                    </p>
+
+                    <p class="text-xs text-slate-300/80 mt-3 ${descClamp} font-sans leading-relaxed border-l-2 ${fam.accentBar} pl-2.5 py-0.5">
+                        ${item.description}
+                    </p>
+                </div>
+
+                <div class="relative z-10 mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] gap-2">
+                    <span class="text-slate-400 truncate flex-1 min-w-0">
+                        <i class="fa-solid fa-folder ${fam.dot} mr-1"></i>${item.domain}
+                    </span>
+                    <a href="${item.link}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation(); return handleResourceLinkClick(event, '${safeLink}')" class="shrink-0 px-2.5 py-1 rounded-lg ${fam.link} border font-semibold transition-all inline-flex items-center space-x-1">
+                        <span>Հղում</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+                    </a>
+                </div>
+            `;
+            return card;
         }
 
         /* Render Domain Cards */
@@ -1930,8 +1928,8 @@
             const ACTIVE = "flex items-center space-x-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all bg-gold-600 text-slate-950 shadow-md";
             const IDLE = "flex items-center space-x-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50";
 
-            const tabs = { materials: 'tab-materials', domains: 'tab-domains', discover: 'tab-discover' };
-            const views = { materials: 'view-materials-container', domains: 'view-domains-container', discover: 'view-discover-container' };
+            const tabs = { materials: 'tab-materials', domains: 'tab-domains' };
+            const views = { materials: 'view-materials-container', domains: 'view-domains-container' };
 
             Object.keys(tabs).forEach(name => {
                 const btn = document.getElementById(tabs[name]);
@@ -1945,9 +1943,6 @@
             if (filterControls) filterControls.classList.toggle('hidden', tabName !== 'materials');
             const foundBadge = document.getElementById('found-badge-wrap');
             if (foundBadge) foundBadge.classList.toggle('hidden', tabName !== 'materials');
-
-            // Lazily build the Discover controls the first time the tab is opened
-            if (tabName === 'discover') initDiscover();
         }
 
         function filterByDomainFromCard(domainTitle) {
@@ -2034,7 +2029,7 @@
                 }
             }
 
-            const citation = `${item.author || 'Անհայտ'}. "${item.title}". Ոլորտ՝ ${item.domain}. Ալեքսանդրիայի Թվային Արխիվ, URL: ${item.link}`;
+            const citation = formatCitation(item);
             document.getElementById('modal-item-citation').textContent = citation;
 
             updateModalBookmarkBtn();
@@ -2253,53 +2248,11 @@
             'Համաշխարհային տնտեսություն & Պատմություն': 'world economy economic history'
         };
 
-        let discoverResults = [];
-        let discoverInited = false;
-
-        function initDiscover() {
-            if (discoverInited) return;
-            discoverInited = true;
-
-            // Thematic quick-pick chips
-            const chips = document.getElementById('discover-domain-chips');
-            if (chips) {
-                chips.innerHTML = '';
-                DOMAINS_DATA.forEach(d => {
-                    const q = DOMAIN_QUERY_MAP[d.title] || d.title;
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.className = 'px-3 py-1.5 rounded-full text-xs font-medium bg-white border border-amber-200 text-slate-600 hover:bg-amber-50 hover:border-gold-400 hover:text-amber-700 transition-all inline-flex items-center gap-1.5';
-                    btn.innerHTML = `<i class="fa-solid ${d.icon} text-[10px] text-gold-500"></i>${d.title}`;
-                    btn.onclick = () => {
-                        document.getElementById('discover-query').value = q;
-                        const fd = document.getElementById('discover-file-domain');
-                        if (fd) fd.value = d.title;
-                        runDiscoverSearch();
-                    };
-                    chips.appendChild(btn);
-                });
-            }
-
-            // "File under" domain select
-            const fileSel = document.getElementById('discover-file-domain');
-            if (fileSel) {
-                fileSel.innerHTML = '';
-                DOMAINS_DATA.forEach(d => {
-                    const o = document.createElement('option');
-                    o.value = d.title; o.textContent = d.title;
-                    fileSel.appendChild(o);
-                });
-            }
-        }
-
-        function setDiscoverStatus(html, show = true) {
-            const box = document.getElementById('discover-status');
-            if (!box) return;
-            box.innerHTML = html;
-            box.classList.toggle('hidden', !show);
-        }
+        let onlineResults = [];
+        let lastOnlineQuery = '';
 
         function stripTags(s) { return String(s || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(); }
+        function escHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
         function httpsify(u) { return String(u || '').replace(/^http:\/\//i, 'https://'); }
 
         async function fetchOpenLibrary(q) {
@@ -2359,47 +2312,74 @@
             }));
         }
 
-        async function runDiscoverSearch() {
-            const queryInput = document.getElementById('discover-query');
-            const fileDomain = document.getElementById('discover-file-domain');
-            let q = queryInput.value.trim();
-            if (!q && fileDomain) q = DOMAIN_QUERY_MAP[fileDomain.value] || fileDomain.value;
-            if (!q) { setDiscoverStatus('<span class="text-slate-500">Մուտքագրեք որոնման բառ կամ ընտրեք ոլորտ։</span>'); return; }
+        // Shown/updated by renderMaterialsGrid: a prompt to also search the internet for the
+        // current query. Online results appear BELOW the local library results.
+        function updateOnlineSearchPrompt() {
+            const block = document.getElementById('online-search-block');
+            const trigger = document.getElementById('online-trigger');
+            const grid = document.getElementById('online-results-grid');
+            if (!block) return;
+            const q = (currentSearchQuery || '').trim();
 
-            const mode = document.getElementById('discover-source').value;
-            document.getElementById('discover-results').innerHTML = '';
-            setDiscoverStatus('<i class="fa-solid fa-spinner fa-spin text-gold-500 text-2xl"></i><div class="mt-2 text-slate-500">Որոնվում է ինտերնետում...</div>');
-
-            const jobs = [];
-            if (mode === 'all' || mode === 'books') { jobs.push(fetchOpenLibrary(q)); jobs.push(fetchGoogleBooks(q)); }
-            if (mode === 'all' || mode === 'articles') { jobs.push(fetchCrossref(q)); }
-
-            const settled = await Promise.allSettled(jobs);
-            let results = [];
-            let failures = 0;
-            settled.forEach(s => { if (s.status === 'fulfilled') results = results.concat(s.value); else failures++; });
-
-            // Interleave sources so the list isn't all one source, then keep titled results
-            results = results.filter(r => r.title && r.title !== '(առանց վերնագրի)');
-
-            if (results.length === 0) {
-                if (failures === settled.length) {
-                    setDiscoverStatus('<i class="fa-solid fa-triangle-exclamation text-amber-500 text-2xl"></i><div class="mt-2 text-slate-500">Չհաջողվեց կապ հաստատել աղբյուրների հետ։ Ստուգեք ինտերնետ կապը և փորձեք կրկին։</div>');
-                } else {
-                    setDiscoverStatus('<i class="fa-solid fa-magnifying-glass text-slate-400 text-2xl"></i><div class="mt-2 text-slate-500">Արդյունքներ չգտնվեցին։ Փորձեք այլ բառեր։</div>');
-                }
+            if (q.length < 3) {
+                block.classList.add('hidden');
+                trigger.innerHTML = '';
+                grid.innerHTML = '';
+                setOnlineStatus('', false);
+                onlineResults = [];
+                lastOnlineQuery = '';
                 return;
             }
 
-            setDiscoverStatus('', false);
-            discoverResults = results;
-            renderDiscoverResults(results);
+            block.classList.remove('hidden');
+            // New query since the last online search → reset and offer the search button
+            if (q !== lastOnlineQuery) {
+                grid.innerHTML = '';
+                onlineResults = [];
+                setOnlineStatus('', false);
+                trigger.innerHTML = `<button onclick="runOnlineSearch()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-gold-500 to-amber-600 hover:from-gold-400 hover:to-amber-500 text-white text-sm font-bold shadow-md transition-all"><i class="fa-solid fa-globe mr-2"></i>Փնտրել «${escHtml(q)}» ինտերնետից</button>`;
+            }
         }
 
-        function renderDiscoverResults(results) {
-            const grid = document.getElementById('discover-results');
-            grid.innerHTML = '';
+        function setOnlineStatus(html, show = true) {
+            const box = document.getElementById('online-status');
+            if (!box) return;
+            box.innerHTML = html;
+            box.classList.toggle('hidden', !show);
+        }
 
+        async function runOnlineSearch() {
+            const q = (currentSearchQuery || '').trim();
+            if (q.length < 3) return;
+            lastOnlineQuery = q;
+            document.getElementById('online-trigger').innerHTML = '';
+            document.getElementById('online-results-grid').innerHTML = '';
+            setOnlineStatus('<i class="fa-solid fa-spinner fa-spin text-gold-400 text-xl mr-2"></i>Որոնվում է ինտերնետում «' + escHtml(q) + '»...');
+
+            const settled = await Promise.allSettled([fetchOpenLibrary(q), fetchGoogleBooks(q), fetchCrossref(q)]);
+            let results = [], failures = 0;
+            settled.forEach(s => { if (s.status === 'fulfilled') results = results.concat(s.value); else failures++; });
+            results = results.filter(r => r.title && r.title !== '(առանց վերնագրի)');
+
+            if (results.length === 0) {
+                setOnlineStatus(failures === settled.length
+                    ? '<i class="fa-solid fa-triangle-exclamation text-amber-400 mr-1"></i>Չհաջողվեց կապ հաստատել աղբյուրների հետ։ (Աշխատում է միայն ձեր կայքում տեղադրվելուց հետո։)'
+                    : '<i class="fa-solid fa-magnifying-glass text-slate-500 mr-1"></i>Ինտերնետից արդյունքներ չգտնվեցին։');
+                return;
+            }
+            setOnlineStatus('', false);
+            onlineResults = results;
+            renderOnlineResults(results);
+        }
+
+        function webItemId(res) {
+            return 'ALX-WEB-' + stableHash(String(res.link) + '|' + String(res.title));
+        }
+
+        // Online result cards — light/white style, matching the (now light) library boxes
+        function renderOnlineResults(results) {
+            const grid = document.getElementById('online-results-grid');
+            grid.innerHTML = '';
             const srcBadge = {
                 'Open Library': 'bg-amber-100 text-amber-700',
                 'Google Books': 'bg-blue-100 text-blue-700',
@@ -2411,13 +2391,12 @@
                 const typeBadge = res.type === 'հոդված'
                     ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200"><i class="fa-solid fa-newspaper mr-1"></i>Հոդված</span>'
                     : '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-book mr-1"></i>Գիրք</span>';
-
                 const cover = res.cover
                     ? `<img src="${res.cover}" alt="" loading="lazy" class="w-16 h-24 object-cover rounded-lg border border-slate-200 shrink-0 bg-slate-100" onerror="this.style.display='none'">`
-                    : `<div class="w-16 h-24 rounded-lg border border-slate-200 bg-gradient-to-br from-amber-50 to-slate-100 flex items-center justify-center text-gold-400 shrink-0"><i class="fa-solid ${res.type === 'հոդված' ? 'fa-newspaper' : 'fa-book'} text-xl"></i></div>`;
+                    : `<div class="w-16 h-24 rounded-lg border border-slate-200 bg-gradient-to-br from-amber-50 to-slate-100 flex items-center justify-center text-gold-500 shrink-0"><i class="fa-solid ${res.type === 'հոդված' ? 'fa-newspaper' : 'fa-book'} text-xl"></i></div>`;
 
                 const card = document.createElement('div');
-                card.className = 'card-in bg-white border border-slate-200 rounded-2xl p-4 hover:border-gold-400 hover:shadow-md transition-all flex flex-col';
+                card.className = 'card-in bg-white border border-slate-200 rounded-2xl p-4 hover:border-gold-400 hover:shadow-lg transition-all flex flex-col text-slate-800';
                 card.style.animationDelay = Math.min(i * 25, 300) + 'ms';
                 card.innerHTML = `
                     <div class="flex gap-3">
@@ -2429,7 +2408,7 @@
                                 ${res.year ? `<span class="text-[10px] text-slate-400">${res.year}</span>` : ''}
                             </div>
                             <h4 class="text-sm font-serif font-bold text-slate-900 leading-snug line-clamp-2">${res.title}</h4>
-                            <p class="text-xs text-slate-500 mt-1 line-clamp-1"><i class="fa-solid fa-user-pen text-gold-500/80 mr-1 text-[10px]"></i>${res.authors}</p>
+                            <p class="text-xs text-slate-500 mt-1 line-clamp-1"><i class="fa-solid fa-user-pen text-gold-500 mr-1 text-[10px]"></i>${res.authors}</p>
                         </div>
                     </div>
                     ${res.description ? `<p class="text-xs text-slate-500 mt-2 line-clamp-2 leading-relaxed">${res.description}</p>` : ''}
@@ -2437,7 +2416,7 @@
                         <a href="${res.link}" target="_blank" rel="noopener noreferrer" onclick="return handleResourceLinkClick(event, '${String(res.link).replace(/'/g, "\\'")}')" class="flex-1 text-center px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all">
                             <i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>Բացել
                         </a>
-                        <button id="disc-add-${i}" onclick="addDiscoverToLibrary(${i})" ${inLibrary ? 'disabled' : ''} class="flex-1 px-3 py-2 rounded-lg text-xs font-bold transition-all ${inLibrary ? 'bg-emerald-100 text-emerald-700 cursor-default' : 'bg-gradient-to-r from-gold-500 to-amber-600 hover:from-gold-400 hover:to-amber-500 text-white'}">
+                        <button id="disc-add-${i}" onclick="addOnlineToLibrary(${i})" ${inLibrary ? 'disabled' : ''} class="flex-1 px-3 py-2 rounded-lg text-xs font-bold transition-all ${inLibrary ? 'bg-emerald-100 text-emerald-700 cursor-default' : 'bg-gradient-to-r from-gold-500 to-amber-600 hover:from-gold-400 hover:to-amber-500 text-white'}">
                             <i class="fa-solid ${inLibrary ? 'fa-check' : 'fa-plus'} mr-1"></i>${inLibrary ? 'Ավելացված է' : 'Ավելացնել'}
                         </button>
                     </div>
@@ -2446,21 +2425,26 @@
             });
         }
 
-        function webItemId(res) {
-            return 'ALX-WEB-' + stableHash(String(res.link) + '|' + String(res.title));
+        function markOnlineAdded(index) {
+            const btn = document.getElementById('disc-add-' + index);
+            if (btn) {
+                btn.disabled = true;
+                btn.className = 'flex-1 px-3 py-2 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-700 cursor-default';
+                btn.innerHTML = '<i class="fa-solid fa-check mr-1"></i>Ավելացված է';
+            }
         }
 
-        function addDiscoverToLibrary(index) {
-            const res = discoverResults[index];
+        function addOnlineToLibrary(index) {
+            const res = onlineResults[index];
             if (!res) return;
-
             const id = webItemId(res);
-            if (materialsData.some(m => m.id === id)) { showToast('Արդեն ձեր գրադարանում է', 'info'); return; }
+            if (materialsData.some(m => m.id === id)) { showToast('Արդեն ձեր գրադարանում է', 'info'); markOnlineAdded(index); return; }
 
-            const fileDomain = document.getElementById('discover-file-domain');
-            const domain = (fileDomain && fileDomain.value) || 'Տեղեկատվական տեխնոլոգիաներ';
+            // File under the currently selected domain filter, otherwise a sensible default
+            const domSel = document.getElementById('domain-filter');
+            const domain = (domSel && domSel.value && domSel.value !== 'ALL') ? domSel.value : 'Տեղեկատվական տեխնոլոգիաներ';
 
-            const item = {
+            userItems.unshift({
                 id,
                 title: res.title,
                 author: res.authors || 'Անհայտ',
@@ -2475,25 +2459,98 @@
                 cover: res.cover || '',
                 userAdded: true,
                 fromWeb: true
-            };
-
-            userItems.unshift(item);
+            });
             saveUserItems();
             rebuildMaterials();
             populateDomainDropdowns();
             updateStatsCounters();
-            applyFilters();
             renderDomainsTab();
             updateBookmarksUI();
-
-            // Reflect the added state on the button
-            const btn = document.getElementById('disc-add-' + index);
-            if (btn) {
-                btn.disabled = true;
-                btn.className = 'flex-1 px-3 py-2 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-700 cursor-default';
-                btn.innerHTML = '<i class="fa-solid fa-check mr-1"></i>Ավելացված է';
-            }
+            applyFilters();
+            markOnlineAdded(index);
             showToast('Ավելացվեց ձեր գրադարանում ✓');
+        }
+
+        /* ============================================================
+           SAVE / ADD BY CITATION — paste one or more citation strings in
+           the exact format the app produces, e.g.
+           Անհայտ. "Միջազգային գիտաժողովի նյութեր". Ոլորտ՝ Միջազգային
+           տնտեսագիտություն. Ալեքսանդրիայի Թվային Արխիվ, URL: https://doi.org/...
+           …and each is parsed back ("retranslated") into a library box.
+           ============================================================ */
+        function formatCitation(item) {
+            return `${item.author || 'Անհայտ'}. "${item.title}". Ոլորտ՝ ${item.domain}. Ալեքսանդրիայի Թվային Արխիվ, URL: ${item.link}`;
+        }
+
+        function parseCitation(text) {
+            const s = String(text || '').replace(/\s+/g, ' ').trim();
+            if (!s) return null;
+            const link = (s.match(/URL[:：]?\s*(\S+)/i) || [])[1] || (s.match(/https?:\/\/\S+/) || [])[0] || '';
+            const title = (s.match(/[«"“”"]([^«»"“”"]+)[»"“”"]/) || [])[1] || '';
+            let domain = (s.match(/Ոլորտ՝?\s*([^.]+?)\s*\.\s*Ալեքսանդրիայի/i) || s.match(/Ոլորտ՝?\s*([^.]+)/i) || [])[1] || '';
+            const author = (s.match(/^(.*?)\.\s*[«"“”"]/) || [])[1] || '';
+            if (!title && !link) return null;
+            return { author: (author || 'Անհայտ').trim(), title: title.trim(), domain: domain.trim(), link: (link || '#').trim() };
+        }
+
+        function ensureDomain(domain) {
+            if (!domain) return;
+            if (!DOMAINS_DATA.some(d => d.title === domain)) {
+                const fam = getFamily(domain);
+                DOMAINS_DATA.push({ id: 'DOM-CIT-' + DOMAINS_DATA.length, title: domain, icon: 'fa-folder-open', color: fam.domGrad, borderColor: fam.domBorder, description: `Ավելացված ոլորտ՝ ${domain}`, tags: [] });
+            }
+        }
+
+        function toggleCitationBox() {
+            const box = document.getElementById('citation-box');
+            if (box) {
+                box.classList.toggle('hidden');
+                if (!box.classList.contains('hidden')) document.getElementById('citation-input').focus();
+            }
+        }
+
+        function addByCitation() {
+            const ta = document.getElementById('citation-input');
+            const lines = ta.value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+            if (!lines.length) { showToast('Մուտքագրեք մեջբերում', 'info'); return; }
+
+            let added = 0, failed = 0;
+            lines.forEach(line => {
+                const p = parseCitation(line);
+                if (!p || !p.title) { failed++; return; }
+                const domain = p.domain || 'Տեղեկատվական տեխնոլոգիաներ';
+                ensureDomain(domain);
+                const id = 'ALX-CIT-' + stableHash((p.link || '') + '|' + p.title);
+                if (materialsData.some(m => m.id === id) || userItems.some(m => m.id === id)) return;
+                userItems.unshift({
+                    id,
+                    title: p.title,
+                    author: p.author || 'Անհայտ',
+                    link: p.link || '#',
+                    domain,
+                    type: canonicalType({ link: p.link, type: 'գիրք' }),
+                    rating: 5.0,
+                    bentoSpan: getBentoSpanForId(id),
+                    description: 'Ավելացված մեջբերումով (citation)։',
+                    tags: [],
+                    extra: {},
+                    userAdded: true,
+                    fromCitation: true
+                });
+                added++;
+            });
+
+            if (added) {
+                saveUserItems();
+                rebuildMaterials();
+                populateDomainDropdowns();
+                updateStatsCounters();
+                renderDomainsTab();
+                updateBookmarksUI();
+                applyFilters();
+                ta.value = '';
+            }
+            showToast(added ? `Ավելացվեց ${added} ռեսուրս ✓` : 'Չհաջողվեց ճանաչել մեջբերումը', added ? 'success' : 'warning');
         }
     </script>
 </body>
