@@ -95,7 +95,7 @@
             box-shadow: 0 0 20px rgba(217, 119, 6, 0.15);
         }
 
-        /* Bento Grid Layout Spans */
+        /* Bento Grid Layout Spans — varied card sizes */
         .bento-tall {
             grid-row: span 2 / span 2;
         }
@@ -106,12 +106,34 @@
             grid-column: span 2 / span 2;
             grid-row: span 2 / span 2;
         }
+        /* Extra-wide (3 columns) card, only on the widest breakpoint */
+        .bento-hero {
+            grid-column: span 2 / span 2;
+            grid-row: span 2 / span 2;
+        }
+        @media (min-width: 1280px) {
+            .bento-hero {
+                grid-column: span 3 / span 3;
+            }
+        }
 
         @media (max-width: 768px) {
-            .bento-tall, .bento-wide, .bento-featured {
+            .bento-tall, .bento-wide, .bento-featured, .bento-hero {
                 grid-column: span 1 / span 1 !important;
                 grid-row: span 1 / span 1 !important;
             }
+        }
+
+        /* Staggered card entrance */
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(14px) scale(0.98); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .card-in {
+            animation: cardIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .card-in { animation: none; }
         }
         
         /* Toast Animation */
@@ -149,11 +171,29 @@
             </div>
 
             <!-- Global Actions -->
-            <div class="flex items-center space-x-2 sm:space-x-4">
-                
-                <button onclick="toggleBookmarksDrawer()" class="relative p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-300 hover:text-gold-400 hover:border-gold-500/40 transition-all">
+            <div class="flex items-center space-x-2">
+
+                <button onclick="openAddModal()" title="Ավելացնել նոր ռեսուրս" class="hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-gold-500 to-amber-600 hover:from-gold-400 hover:to-amber-500 text-slate-950 font-bold text-sm shadow-lg shadow-gold-600/20 transition-all">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Ավելացնել</span>
+                </button>
+
+                <button onclick="openImportModal()" title="Ներմուծել Excel / Sheets-ից" class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-300 hover:text-emerald-400 hover:border-emerald-500/40 transition-all">
+                    <i class="fa-solid fa-file-import text-lg"></i>
+                </button>
+
+                <button onclick="syncDefaultGoogleSheet(false)" title="Սինքրոնացնել Google Sheet-ի հետ" class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-300 hover:text-sky-400 hover:border-sky-500/40 transition-all">
+                    <i class="fa-solid fa-rotate text-lg"></i>
+                </button>
+
+                <button onclick="toggleBookmarksDrawer()" title="Պահպանված ռեսուրսներ" class="relative p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 text-slate-300 hover:text-gold-400 hover:border-gold-500/40 transition-all">
                     <i class="fa-solid fa-bookmark text-lg"></i>
                     <span id="bookmark-badge" class="absolute -top-1 -right-1 w-5 h-5 bg-gold-500 text-slate-950 text-xs font-bold rounded-full flex items-center justify-center hidden">0</span>
+                </button>
+
+                <!-- Mobile add button -->
+                <button onclick="openAddModal()" title="Ավելացնել" class="sm:hidden p-2.5 rounded-lg bg-gradient-to-r from-gold-500 to-amber-600 text-slate-950 shadow-lg transition-all">
+                    <i class="fa-solid fa-plus text-lg"></i>
                 </button>
             </div>
         </div>
@@ -267,7 +307,7 @@
 
         <!-- VIEW 1: Materials Grid -->
         <div id="view-materials-container" class="block">
-            <div id="materials-bento-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 auto-rows-[250px]"></div>
+            <div id="materials-bento-grid" class="grid grid-flow-row-dense grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 auto-rows-[248px]"></div>
 
             <!-- Empty State -->
             <div id="empty-state" class="hidden flex-col items-center justify-center py-20 text-center">
@@ -732,41 +772,112 @@
             return 'գիրք';
         }
 
-        /* Same domain -> color family mapping used for the curated dataset, so imported/synced
-           items get the same varied, cohesive card colors instead of one flat color. */
+        /* Rich color-family system. Each domain maps to one of 8 families; every family carries a
+           full set of literal Tailwind classes (so the Play CDN JIT picks them up from the DOM) that
+           tint the card background, hover border, glow blob, title, footer link and accent dot —
+           cohesive with the golden Alexandria style but far more colorful and varied. */
         const DOMAIN_FAMILY_MAP = {
             'Վերլուծական Երկրաչափություն և Գծային Հանրահաշիվ': 'gold',
             'Մաթեմատիկական Անալիզ': 'teal',
             'Միկրոտնտեսագիտություն': 'rose',
             'Մակրոտնտեսագիտություն': 'indigo',
-            'Մենեջմենթի հիմունքներ': 'gold',
-            'Արտադրության մենեջմենթ': 'teal',
-            'Ծառայությունների ոլորտի կառավարում & Էկոնոմիկա': 'rose',
-            'Գործույթների հետազոտման մաթեմատիկական մեթոդներ': 'indigo',
+            'Մենեջմենթի հիմունքներ': 'violet',
+            'Արտադրության մենեջմենթ': 'emerald',
+            'Ծառայությունների ոլորտի կառավարում & Էկոնոմիկա': 'sky',
+            'Գործույթների հետազոտման մաթեմատիկական մեթոդներ': 'orange',
             'Ֆինանսներ': 'gold',
             'Հոգեբանություն': 'teal',
-            'Տեղեկատվական տեխնոլոգիաներ': 'rose',
-            'Համաշխարհային տնտեսություն & Պատմություն': 'indigo',
+            'Տեղեկատվական տեխնոլոգիաներ': 'violet',
+            'Համաշխարհային տնտեսություն & Պատմություն': 'sky',
         };
-        const FAMILY_DARK_ACCENT = {
-            gold: 'from-amber-950/40 to-slate-900/90',
-            teal: 'from-teal-950/40 to-slate-900/90',
-            rose: 'from-rose-950/40 to-slate-900/90',
-            indigo: 'from-indigo-950/40 to-slate-900/90',
+
+        const FAMILY = {
+            gold: {
+                grad: 'from-amber-950/55 via-slate-900/95 to-slate-950', border: 'hover:border-amber-500/60',
+                glow: 'bg-amber-500/10 group-hover:bg-amber-400/25', title: 'group-hover:text-amber-300',
+                accentBar: 'border-amber-500/50', link: 'bg-amber-500/10 hover:bg-amber-500/25 text-amber-300 border-amber-500/30',
+                dot: 'text-amber-400', domGrad: 'from-amber-500/15 to-amber-800/5', domBorder: 'border-amber-500/30',
+                shadow: 'hover:shadow-amber-500/15'
+            },
+            teal: {
+                grad: 'from-teal-950/55 via-slate-900/95 to-slate-950', border: 'hover:border-teal-500/60',
+                glow: 'bg-teal-500/10 group-hover:bg-teal-400/25', title: 'group-hover:text-teal-300',
+                accentBar: 'border-teal-500/50', link: 'bg-teal-500/10 hover:bg-teal-500/25 text-teal-300 border-teal-500/30',
+                dot: 'text-teal-400', domGrad: 'from-teal-500/15 to-cyan-800/5', domBorder: 'border-teal-500/30',
+                shadow: 'hover:shadow-teal-500/15'
+            },
+            rose: {
+                grad: 'from-rose-950/55 via-slate-900/95 to-slate-950', border: 'hover:border-rose-500/60',
+                glow: 'bg-rose-500/10 group-hover:bg-rose-400/25', title: 'group-hover:text-rose-300',
+                accentBar: 'border-rose-500/50', link: 'bg-rose-500/10 hover:bg-rose-500/25 text-rose-300 border-rose-500/30',
+                dot: 'text-rose-400', domGrad: 'from-rose-500/15 to-pink-800/5', domBorder: 'border-rose-500/30',
+                shadow: 'hover:shadow-rose-500/15'
+            },
+            indigo: {
+                grad: 'from-indigo-950/55 via-slate-900/95 to-slate-950', border: 'hover:border-indigo-500/60',
+                glow: 'bg-indigo-500/10 group-hover:bg-indigo-400/25', title: 'group-hover:text-indigo-300',
+                accentBar: 'border-indigo-500/50', link: 'bg-indigo-500/10 hover:bg-indigo-500/25 text-indigo-300 border-indigo-500/30',
+                dot: 'text-indigo-400', domGrad: 'from-indigo-500/15 to-blue-800/5', domBorder: 'border-indigo-500/30',
+                shadow: 'hover:shadow-indigo-500/15'
+            },
+            violet: {
+                grad: 'from-violet-950/55 via-slate-900/95 to-slate-950', border: 'hover:border-violet-500/60',
+                glow: 'bg-violet-500/10 group-hover:bg-violet-400/25', title: 'group-hover:text-violet-300',
+                accentBar: 'border-violet-500/50', link: 'bg-violet-500/10 hover:bg-violet-500/25 text-violet-300 border-violet-500/30',
+                dot: 'text-violet-400', domGrad: 'from-violet-500/15 to-fuchsia-800/5', domBorder: 'border-violet-500/30',
+                shadow: 'hover:shadow-violet-500/15'
+            },
+            emerald: {
+                grad: 'from-emerald-950/55 via-slate-900/95 to-slate-950', border: 'hover:border-emerald-500/60',
+                glow: 'bg-emerald-500/10 group-hover:bg-emerald-400/25', title: 'group-hover:text-emerald-300',
+                accentBar: 'border-emerald-500/50', link: 'bg-emerald-500/10 hover:bg-emerald-500/25 text-emerald-300 border-emerald-500/30',
+                dot: 'text-emerald-400', domGrad: 'from-emerald-500/15 to-green-800/5', domBorder: 'border-emerald-500/30',
+                shadow: 'hover:shadow-emerald-500/15'
+            },
+            sky: {
+                grad: 'from-sky-950/55 via-slate-900/95 to-slate-950', border: 'hover:border-sky-500/60',
+                glow: 'bg-sky-500/10 group-hover:bg-sky-400/25', title: 'group-hover:text-sky-300',
+                accentBar: 'border-sky-500/50', link: 'bg-sky-500/10 hover:bg-sky-500/25 text-sky-300 border-sky-500/30',
+                dot: 'text-sky-400', domGrad: 'from-sky-500/15 to-blue-800/5', domBorder: 'border-sky-500/30',
+                shadow: 'hover:shadow-sky-500/15'
+            },
+            orange: {
+                grad: 'from-orange-950/55 via-slate-900/95 to-slate-950', border: 'hover:border-orange-500/60',
+                glow: 'bg-orange-500/10 group-hover:bg-orange-400/25', title: 'group-hover:text-orange-300',
+                accentBar: 'border-orange-500/50', link: 'bg-orange-500/10 hover:bg-orange-500/25 text-orange-300 border-orange-500/30',
+                dot: 'text-orange-400', domGrad: 'from-orange-500/15 to-amber-800/5', domBorder: 'border-orange-500/30',
+                shadow: 'hover:shadow-orange-500/15'
+            }
         };
-        // Mostly plain cards with occasional wide/tall/featured ones, matching the curated bento rhythm
-        const BENTO_SPAN_CYCLE = ['', '', 'bento-wide', '', '', 'bento-tall', '', 'bento-featured', '', ''];
+
+        // Fallback family used when a domain isn't in the map (cycles through all for variety)
+        const FAMILY_KEYS = Object.keys(FAMILY);
+
+        function getFamilyKey(domainTitle) {
+            if (DOMAIN_FAMILY_MAP[domainTitle]) return DOMAIN_FAMILY_MAP[domainTitle];
+            // Deterministic pick for unknown/imported domains so colors stay stable
+            let h = 0;
+            const s = String(domainTitle || '');
+            for (let i = 0; i < s.length; i++) h += s.charCodeAt(i);
+            return FAMILY_KEYS[h % FAMILY_KEYS.length];
+        }
+
+        function getFamily(domainTitle) {
+            return FAMILY[getFamilyKey(domainTitle)];
+        }
 
         function getAccentForDomain(domainTitle) {
-            const fam = DOMAIN_FAMILY_MAP[domainTitle] || 'gold';
-            return FAMILY_DARK_ACCENT[fam];
+            return getFamily(domainTitle).grad;
         }
+
+        // Varied rhythm of sizes: small (1x1), wide (2x1), tall (1x2), featured (2x2) and an occasional hero.
+        const BENTO_SPAN_CYCLE = ['', 'bento-wide', '', 'bento-tall', '', '', 'bento-featured', '', 'bento-wide', '', 'bento-tall', '', 'bento-hero', '', ''];
 
         // Deterministic (not random) so the same item always keeps the same size across reloads/re-syncs
         function getBentoSpanForId(id) {
             let h = 0;
-            for (let i = 0; i < id.length; i++) h += id.charCodeAt(i);
-            return BENTO_SPAN_CYCLE[h % BENTO_SPAN_CYCLE.length];
+            for (let i = 0; i < id.length; i++) h += id.charCodeAt(i) * (i + 1);
+            return BENTO_SPAN_CYCLE[Math.abs(h) % BENTO_SPAN_CYCLE.length];
         }
 
         function processImportedRows(rows, rowLinks) {
@@ -804,19 +915,22 @@
 
                 // Auto add to domains if missing
                 if (!DOMAINS_DATA.some(d => d.title === domain)) {
+                    const fam = getFamily(domain);
                     DOMAINS_DATA.push({
                         id: `DOM-CUSTOM-${DOMAINS_DATA.length + 1}`,
                         title: domain,
                         icon: 'fa-folder-open',
-                        color: 'from-slate-800/40 to-slate-900/90',
-                        borderColor: 'border-slate-700',
+                        color: fam.domGrad,
+                        borderColor: fam.domBorder,
                         description: `Ներմուծված ոլորտ՝ ${domain}`,
                         tags: tags
                     });
                 }
 
+                // Skip rows that duplicate a curated base item (same title + link)
+                if (BASE_KEYS.has(itemKey(title, link))) { return; }
+
                 const stableId = `ALX-IMP-${stableHash(title + '|' + link)}`;
-                const existingIdx = materialsData.findIndex(m => m.id === stableId);
                 const newItem = {
                     id: stableId,
                     title,
@@ -828,19 +942,23 @@
                     bentoSpan: getBentoSpanForId(stableId),
                     description,
                     tags,
-                    bgAccent: getAccentForDomain(domain)
+                    bgAccent: getAccentForDomain(domain),
+                    userAdded: true
                 };
 
+                const existingIdx = userItems.findIndex(m => m.id === stableId);
                 if (existingIdx >= 0) {
-                    materialsData[existingIdx] = newItem;
+                    userItems[existingIdx] = newItem;
                 } else {
-                    materialsData.unshift(newItem);
+                    userItems.unshift(newItem);
                 }
 
                 addedCount++;
             });
 
             if (addedCount > 0) {
+                saveUserItems();
+                rebuildMaterials();
                 populateDomainDropdowns();
                 updateStatsCounters();
                 renderTagPills();
@@ -972,7 +1090,7 @@
             }
         ];
 
-        let materialsData = [
+        const BASE_MATERIALS = [
             {
                 id: 'ALX-001',
                 title: 'Վերլուծական երկրաչափության և գծային հանրահաշվի խնդրագիրք',
@@ -1339,6 +1457,51 @@
             }
         ];
 
+        /* ============================================================
+           SAVING SYSTEM — persistent local library
+           Everything the user adds manually or imports (Excel / CSV /
+           Google Sheet) is stored in localStorage under 'alx_user_items'
+           and merged on top of the built-in curated set, so nothing is
+           ever lost on reload. This is what makes "saving" actually work.
+           ============================================================ */
+        const USER_ITEMS_KEY = 'alx_user_items';
+
+        function loadUserItems() {
+            try {
+                const raw = localStorage.getItem(USER_ITEMS_KEY);
+                const arr = raw ? JSON.parse(raw) : [];
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) {
+                console.warn('Could not read saved items:', e);
+                return [];
+            }
+        }
+
+        function saveUserItems() {
+            try {
+                localStorage.setItem(USER_ITEMS_KEY, JSON.stringify(userItems));
+            } catch (e) {
+                console.warn('Could not save items:', e);
+                showToast('Չհաջողվեց պահպանել (browser storage-ը արգելափակված է):', 'warning');
+            }
+        }
+
+        // Key used to detect items already present in the curated base set (avoid duplicates)
+        function itemKey(title, link) {
+            return String(title || '').trim().toLowerCase() + '||' + String(link || '').trim().toLowerCase();
+        }
+        const BASE_KEYS = new Set(BASE_MATERIALS.map(m => itemKey(m.title, m.link)));
+
+        // Rebuild the live list: saved items first (newest on top), then curated items not overridden.
+        function rebuildMaterials() {
+            const userIds = new Set(userItems.map(i => i.id));
+            materialsData = [...userItems, ...BASE_MATERIALS.filter(b => !userIds.has(b.id))];
+        }
+
+        let userItems = loadUserItems();
+        let materialsData = [];
+        rebuildMaterials();
+
         /* App State */
         let activeTab = 'materials';
         let currentSearchQuery = '';
@@ -1549,9 +1712,14 @@
             emptyState.classList.add('hidden');
             emptyState.classList.remove('flex');
 
-            items.forEach(item => {
+            items.forEach((item, i) => {
                 const isBookmarked = bookmarks.includes(item.id);
                 const normType = normalizeType(item.type);
+                const fam = getFamily(item.domain);
+                const span = getBentoSpanForId(item.id);
+                const isLarge = span.includes('featured') || span.includes('hero');
+                const isTall = span.includes('tall') || isLarge;
+                const safeLink = (item.link || '#').replace(/'/g, "\\'");
 
                 let badgeIcon = 'fa-file-lines';
                 let badgeClass = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
@@ -1564,47 +1732,53 @@
                 }
 
                 const card = document.createElement('div');
-                card.className = `group relative rounded-2xl p-5 bg-gradient-to-br ${item.bgAccent || 'from-slate-900 to-slate-950'} border border-slate-800 hover:border-gold-500/50 shadow-xl hover:shadow-2xl hover:shadow-amber-500/10 transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer ${item.bentoSpan || ''}`;
-                
+                card.className = `group card-in relative rounded-2xl p-5 bg-gradient-to-br ${fam.grad} border border-slate-800/80 ${fam.border} shadow-xl hover:shadow-2xl ${fam.shadow} hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between overflow-hidden cursor-pointer ${span}`;
+                card.style.animationDelay = Math.min(i * 35, 420) + 'ms';
+
                 card.onclick = () => openDetailModal(item.id);
 
-                card.innerHTML = `
-                    <div class="absolute -right-10 -bottom-10 w-32 h-32 bg-gold-500/5 rounded-full blur-2xl group-hover:bg-gold-500/15 transition-all"></div>
+                const deleteBtn = item.userAdded
+                    ? `<button onclick="event.stopPropagation(); deleteUserItem('${item.id}')" title="Ջնջել" class="text-slate-500 hover:text-red-400 p-1 transition-colors"><i class="fa-solid fa-trash-can text-xs"></i></button>`
+                    : '';
 
-                    <div>
+                card.innerHTML = `
+                    <div class="absolute -right-10 -bottom-10 w-40 h-40 ${fam.glow} rounded-full blur-2xl transition-all duration-500"></div>
+
+                    <div class="relative z-10">
                         <div class="flex items-center justify-between mb-3">
                             <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${badgeClass} capitalize flex items-center gap-1.5">
                                 <i class="fa-solid ${badgeIcon} text-[10px]"></i> ${item.type}
                             </span>
-                            <div class="flex items-center space-x-2">
+                            <div class="flex items-center space-x-1.5">
                                 <span class="text-xs text-yellow-400 font-bold flex items-center">
                                     <i class="fa-solid fa-star text-[10px] mr-1"></i>${item.rating}
                                 </span>
+                                ${deleteBtn}
                                 <button onclick="event.stopPropagation(); toggleBookmark('${item.id}')" class="text-slate-500 hover:text-gold-400 p-1 transition-colors">
                                     <i class="${isBookmarked ? 'fa-solid fa-bookmark text-gold-400' : 'fa-regular fa-bookmark'}"></i>
                                 </button>
                             </div>
                         </div>
 
-                        <h3 class="text-base sm:text-lg font-serif font-bold text-slate-100 group-hover:text-gold-300 transition-colors line-clamp-2">
+                        <h3 class="${isLarge ? 'text-xl sm:text-2xl' : 'text-base sm:text-lg'} font-serif font-bold text-slate-100 ${fam.title} transition-colors ${isLarge ? 'line-clamp-3' : 'line-clamp-2'}">
                             ${item.title}
                         </h3>
 
-                        <p class="text-xs text-slate-400 mt-1 flex items-center">
-                            <i class="fa-solid fa-user-pen text-amber-500/80 mr-1.5 text-[10px]"></i>
+                        <p class="text-xs text-slate-400 mt-1.5 flex items-center">
+                            <i class="fa-solid fa-user-pen ${fam.dot} mr-1.5 text-[10px]"></i>
                             <span class="truncate">${item.author || 'Անհայտ'}</span>
                         </p>
 
-                        <p class="text-xs text-slate-300/80 mt-3 line-clamp-2 font-sans leading-relaxed border-l-2 border-gold-600/40 pl-2.5 py-0.5">
+                        <p class="text-xs text-slate-300/80 mt-3 ${isLarge ? 'line-clamp-6' : (isTall ? 'line-clamp-5' : 'line-clamp-2')} font-sans leading-relaxed border-l-2 ${fam.accentBar} pl-2.5 py-0.5">
                             ${item.description}
                         </p>
                     </div>
 
-                    <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
-                        <span class="text-slate-400 truncate max-w-[160px]">
-                            <i class="fa-solid fa-folder text-slate-500 mr-1"></i>${item.domain}
+                    <div class="relative z-10 mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] gap-2">
+                        <span class="text-slate-400 truncate flex-1 min-w-0">
+                            <i class="fa-solid fa-folder ${fam.dot} mr-1"></i>${item.domain}
                         </span>
-                        <a href="${item.link}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation(); return handleResourceLinkClick(event, item.link)" class="px-2.5 py-1 rounded-lg bg-gold-500/10 hover:bg-gold-500/20 text-gold-300 border border-gold-500/30 font-semibold transition-all inline-flex items-center space-x-1">
+                        <a href="${item.link}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation(); return handleResourceLinkClick(event, '${safeLink}')" class="shrink-0 px-2.5 py-1 rounded-lg ${fam.link} border font-semibold transition-all inline-flex items-center space-x-1">
                             <span>Հղում</span>
                             <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
                         </a>
@@ -1620,19 +1794,22 @@
             const container = document.getElementById('domains-cards-grid');
             container.innerHTML = '';
 
-            DOMAINS_DATA.forEach(dom => {
+            DOMAINS_DATA.forEach((dom, i) => {
                 const count = materialsData.filter(m => m.domain === dom.title).length;
+                const fam = getFamily(dom.title);
+                const safeTitle = dom.title.replace(/'/g, "\\'");
 
                 const card = document.createElement('div');
-                card.className = `rounded-2xl p-6 bg-gradient-to-br ${dom.color} bg-slate-900/90 border ${dom.borderColor} hover:border-gold-500/60 transition-all duration-300 shadow-xl flex flex-col justify-between`;
+                card.className = `card-in rounded-2xl p-6 bg-gradient-to-br ${fam.domGrad} bg-slate-900/90 border ${fam.domBorder} ${fam.border} hover:-translate-y-0.5 transition-all duration-300 shadow-xl ${fam.shadow} flex flex-col justify-between`;
+                card.style.animationDelay = Math.min(i * 35, 420) + 'ms';
 
                 card.innerHTML = `
                     <div>
                         <div class="flex items-center justify-between mb-4">
-                            <div class="w-12 h-12 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-center text-gold-400 text-xl shadow-inner">
+                            <div class="w-12 h-12 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-center ${fam.dot} text-xl shadow-inner">
                                 <i class="fa-solid ${dom.icon}"></i>
                             </div>
-                            <span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-950 text-gold-400 border border-amber-500/20">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold bg-slate-950 ${fam.dot} border border-slate-700">
                                 ${count} Ռեսուրս
                             </span>
                         </div>
@@ -1648,7 +1825,7 @@
                         </div>
                     </div>
 
-                    <button onclick="filterByDomainFromCard('${dom.title}')" class="mt-6 w-full py-2.5 rounded-xl bg-gold-600/20 hover:bg-gold-600 text-gold-300 hover:text-slate-950 border border-gold-500/30 text-xs font-bold transition-all flex items-center justify-center space-x-2">
+                    <button onclick="filterByDomainFromCard('${safeTitle}')" class="mt-6 w-full py-2.5 rounded-xl ${fam.link} border text-xs font-bold transition-all flex items-center justify-center space-x-2">
                         <span>Դիտել Ռեսուրսները</span>
                         <i class="fa-solid fa-arrow-right text-[10px]"></i>
                     </button>
@@ -1786,6 +1963,13 @@
             const list = document.getElementById('bookmarks-list');
             const footerCount = document.getElementById('bookmarks-count-footer');
 
+            // Self-heal: drop bookmarks whose item no longer exists so the list always renders correctly
+            const cleaned = bookmarks.filter(id => materialsData.some(m => m.id === id));
+            if (cleaned.length !== bookmarks.length) {
+                bookmarks = cleaned;
+                localStorage.setItem('alx_bookmarks', JSON.stringify(bookmarks));
+            }
+
             if (bookmarks.length > 0) {
                 badge.textContent = bookmarks.length;
                 badge.classList.remove('hidden');
@@ -1858,30 +2042,62 @@
 
             const tags = tagsInput ? tagsInput.split(',').map(t => t.trim()).filter(Boolean) : ['Ռեսուրս'];
 
+            const newId = `ALX-USER-${Date.now().toString(36)}`;
             const newItem = {
-                id: `ALX-${String(materialsData.length + 1).padStart(3, '0')}`,
+                id: newId,
                 title,
                 author: author || 'Անհայտ',
-                link,
+                link: link || '#',
                 domain,
                 type,
                 rating: 5.0,
-                bentoSpan: '',
+                bentoSpan: getBentoSpanForId(newId),
                 description: description || 'Ավելացված ուսումնական ռեսուրս։',
                 tags,
-                bgAccent: 'from-amber-950/30 to-slate-900/90'
+                bgAccent: getAccentForDomain(domain),
+                userAdded: true
             };
 
-            materialsData.unshift(newItem);
+            userItems.unshift(newItem);
+            saveUserItems();
+            rebuildMaterials();
 
+            populateDomainDropdowns();
             updateStatsCounters();
             renderTagPills();
             applyFilters();
             renderDomainsTab();
+            updateBookmarksUI();
             closeAddModal();
             document.getElementById('add-item-form').reset();
-            
-            showToast('Նոր ռեսուրսը հաջողությամբ ավելացվեց:');
+
+            showToast('Նոր ռեսուրսը պահպանվեց ✓');
+        }
+
+        /* Removes a user-added / imported item permanently from the saved library */
+        function deleteUserItem(id) {
+            const idx = userItems.findIndex(m => m.id === id);
+            if (idx === -1) return;
+
+            userItems.splice(idx, 1);
+            saveUserItems();
+            rebuildMaterials();
+
+            // Drop any bookmark pointing at the removed item
+            const bIdx = bookmarks.indexOf(id);
+            if (bIdx > -1) {
+                bookmarks.splice(bIdx, 1);
+                localStorage.setItem('alx_bookmarks', JSON.stringify(bookmarks));
+            }
+            if (currentModalItemId === id) closeDetailModal();
+
+            populateDomainDropdowns();
+            updateStatsCounters();
+            renderTagPills();
+            applyFilters();
+            renderDomainsTab();
+            updateBookmarksUI();
+            showToast('Ռեսուրսը ջնջվեց', 'warning');
         }
     </script>
 </body>
