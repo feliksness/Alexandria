@@ -336,16 +336,15 @@
                 </button>
             </div>
 
-            <!-- Integrated online results (appear AFTER local data, from the internet) -->
+            <!-- Integrated online results (appear AFTER local data, fetched automatically) -->
             <div id="online-search-block" class="hidden mt-12">
                 <div class="flex items-center gap-3 mb-4">
                     <div class="h-px flex-1 bg-slate-800"></div>
                     <span class="text-xs uppercase tracking-wider text-slate-400 font-bold flex items-center gap-2"><i class="fa-solid fa-globe text-gold-400"></i>Ինտերնետից</span>
                     <div class="h-px flex-1 bg-slate-800"></div>
                 </div>
-                <div id="online-trigger" class="text-center"></div>
                 <div id="online-status" class="hidden text-center py-6 text-sm text-slate-400"></div>
-                <div id="online-results-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mt-4"></div>
+                <div id="online-results-grid" class="grid grid-flow-row-dense grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 auto-rows-[248px] mt-4"></div>
             </div>
         </div>
 
@@ -1813,9 +1812,6 @@
             card.style.animationDelay = Math.min((i % GRID_BATCH) * 35, 420) + 'ms';
             card.onclick = () => openDetailModal(item.id);
 
-            const deleteBtn = item.userAdded
-                ? `<button onclick="event.stopPropagation(); deleteUserItem('${item.id}')" title="Ջնջել" class="text-slate-500 hover:text-red-400 p-1 transition-colors"><i class="fa-solid fa-trash-can text-xs"></i></button>`
-                : '';
             const descClamp = isLarge ? 'line-clamp-6' : isTall ? 'line-clamp-5' : 'line-clamp-2';
 
             card.innerHTML = `
@@ -1830,7 +1826,6 @@
                             <span class="text-xs text-yellow-400 font-bold flex items-center">
                                 <i class="fa-solid fa-star text-[10px] mr-1"></i>${item.rating}
                             </span>
-                            ${deleteBtn}
                             <button onclick="event.stopPropagation(); toggleBookmark('${item.id}')" class="text-slate-500 hover:text-gold-400 p-1 transition-colors">
                                 <i class="${isBookmarked ? 'fa-solid fa-bookmark text-gold-400' : 'fa-regular fa-bookmark'}"></i>
                             </button>
@@ -2312,32 +2307,39 @@
             }));
         }
 
-        // Shown/updated by renderMaterialsGrid: a prompt to also search the internet for the
-        // current query. Online results appear BELOW the local library results.
+        // Called by renderMaterialsGrid on every search. When the query is long enough it
+        // AUTOMATICALLY (debounced) searches the internet and shows results below the local
+        // library — no button to press.
+        let onlineDebounceTimer = null;
+        let onlinePendingQuery = '';
+
         function updateOnlineSearchPrompt() {
             const block = document.getElementById('online-search-block');
-            const trigger = document.getElementById('online-trigger');
             const grid = document.getElementById('online-results-grid');
             if (!block) return;
             const q = (currentSearchQuery || '').trim();
 
             if (q.length < 3) {
                 block.classList.add('hidden');
-                trigger.innerHTML = '';
                 grid.innerHTML = '';
                 setOnlineStatus('', false);
                 onlineResults = [];
                 lastOnlineQuery = '';
+                onlinePendingQuery = '';
+                clearTimeout(onlineDebounceTimer);
                 return;
             }
 
             block.classList.remove('hidden');
-            // New query since the last online search → reset and offer the search button
-            if (q !== lastOnlineQuery) {
+            // Only (re)search when the query actually changed, and debounce so we don't hit the
+            // APIs on every keystroke.
+            if (q !== lastOnlineQuery && q !== onlinePendingQuery) {
+                onlinePendingQuery = q;
                 grid.innerHTML = '';
                 onlineResults = [];
-                setOnlineStatus('', false);
-                trigger.innerHTML = `<button onclick="runOnlineSearch()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-gold-500 to-amber-600 hover:from-gold-400 hover:to-amber-500 text-white text-sm font-bold shadow-md transition-all"><i class="fa-solid fa-globe mr-2"></i>Փնտրել «${escHtml(q)}» ինտերնետից</button>`;
+                setOnlineStatus('<i class="fa-solid fa-spinner fa-spin text-gold-400 mr-2"></i>Փնտրում ինտերնետում «' + escHtml(q) + '»...');
+                clearTimeout(onlineDebounceTimer);
+                onlineDebounceTimer = setTimeout(() => runOnlineSearch(q), 650);
             }
         }
 
@@ -2348,15 +2350,19 @@
             box.classList.toggle('hidden', !show);
         }
 
-        async function runOnlineSearch() {
-            const q = (currentSearchQuery || '').trim();
+        async function runOnlineSearch(q) {
+            q = (q || currentSearchQuery || '').trim();
             if (q.length < 3) return;
             lastOnlineQuery = q;
-            document.getElementById('online-trigger').innerHTML = '';
-            document.getElementById('online-results-grid').innerHTML = '';
-            setOnlineStatus('<i class="fa-solid fa-spinner fa-spin text-gold-400 text-xl mr-2"></i>Որոնվում է ինտերնետում «' + escHtml(q) + '»...');
+            onlinePendingQuery = '';
+            const grid = document.getElementById('online-results-grid');
+            grid.innerHTML = '';
+            setOnlineStatus('<i class="fa-solid fa-spinner fa-spin text-gold-400 mr-2"></i>Փնտրում ինտերնետում «' + escHtml(q) + '»...');
 
             const settled = await Promise.allSettled([fetchOpenLibrary(q), fetchGoogleBooks(q), fetchCrossref(q)]);
+            // Ignore a stale response if the user has since typed a different query
+            if (q !== lastOnlineQuery) return;
+
             let results = [], failures = 0;
             settled.forEach(s => { if (s.status === 'fulfilled') results = results.concat(s.value); else failures++; });
             results = results.filter(r => r.title && r.title !== '(առանց վերնագրի)');
@@ -2376,61 +2382,85 @@
             return 'ALX-WEB-' + stableHash(String(res.link) + '|' + String(res.title));
         }
 
-        // Online result cards — light/white style, matching the (now light) library boxes
+        // Online cards use the SAME dark box style as the library, with a small "Ինտերնետ" note
+        // and a single save action (no separate light card, no big Add button).
         function renderOnlineResults(results) {
             const grid = document.getElementById('online-results-grid');
             grid.innerHTML = '';
-            const srcBadge = {
-                'Open Library': 'bg-amber-100 text-amber-700',
-                'Google Books': 'bg-blue-100 text-blue-700',
-                'Crossref': 'bg-emerald-100 text-emerald-700'
-            };
+            const frag = document.createDocumentFragment();
+            results.forEach((res, i) => frag.appendChild(buildOnlineCard(res, i)));
+            grid.appendChild(frag);
+        }
 
-            results.forEach((res, i) => {
-                const inLibrary = materialsData.some(m => m.id === webItemId(res));
-                const typeBadge = res.type === 'հոդված'
-                    ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200"><i class="fa-solid fa-newspaper mr-1"></i>Հոդված</span>'
-                    : '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-book mr-1"></i>Գիրք</span>';
-                const cover = res.cover
-                    ? `<img src="${res.cover}" alt="" loading="lazy" class="w-16 h-24 object-cover rounded-lg border border-slate-200 shrink-0 bg-slate-100" onerror="this.style.display='none'">`
-                    : `<div class="w-16 h-24 rounded-lg border border-slate-200 bg-gradient-to-br from-amber-50 to-slate-100 flex items-center justify-center text-gold-500 shrink-0"><i class="fa-solid ${res.type === 'հոդված' ? 'fa-newspaper' : 'fa-book'} text-xl"></i></div>`;
+        function buildOnlineCard(res, i) {
+            const id = webItemId(res);
+            const inLibrary = materialsData.some(m => m.id === id);
+            const normType = normalizeType(res.type);
+            const fam = getFamily(res.source + res.title); // deterministic varied color, like normal boxes
+            const span = getBentoSpanForId(id);
+            const badge = typeBadgeDark(normType);
+            const safeLink = (res.link || '#').replace(/'/g, "\\'");
+            const isLarge = span.includes('featured') || span.includes('hero');
+            const isTall = span.includes('tall') || isLarge;
+            const descClamp = isLarge ? 'line-clamp-6' : isTall ? 'line-clamp-5' : 'line-clamp-2';
 
-                const card = document.createElement('div');
-                card.className = 'card-in bg-white border border-slate-200 rounded-2xl p-4 hover:border-gold-400 hover:shadow-lg transition-all flex flex-col text-slate-800';
-                card.style.animationDelay = Math.min(i * 25, 300) + 'ms';
-                card.innerHTML = `
-                    <div class="flex gap-3">
-                        ${cover}
-                        <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-1.5 flex-wrap mb-1.5">
-                                ${typeBadge}
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold ${srcBadge[res.source] || 'bg-slate-100 text-slate-600'}">${res.source}</span>
-                                ${res.year ? `<span class="text-[10px] text-slate-400">${res.year}</span>` : ''}
-                            </div>
-                            <h4 class="text-sm font-serif font-bold text-slate-900 leading-snug line-clamp-2">${res.title}</h4>
-                            <p class="text-xs text-slate-500 mt-1 line-clamp-1"><i class="fa-solid fa-user-pen text-gold-500 mr-1 text-[10px]"></i>${res.authors}</p>
+            const card = document.createElement('div');
+            card.className = `group card-in relative rounded-2xl p-5 bg-gradient-to-br ${fam.grad} border border-slate-800/80 ${fam.border} shadow-xl hover:shadow-2xl ${fam.shadow} hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between overflow-hidden ${span}`;
+            card.style.animationDelay = Math.min(i * 30, 360) + 'ms';
+
+            const saveBtn = inLibrary
+                ? `<span id="online-save-${i}" class="text-emerald-400 p-1" title="Պահպանված է"><i class="fa-solid fa-circle-check"></i></span>`
+                : `<button id="online-save-${i}" onclick="addOnlineToLibrary(${i})" title="Պահպանել գրադարանում" class="text-slate-400 hover:text-gold-400 p-1 transition-colors"><i class="fa-solid fa-bookmark"></i></button>`;
+
+            card.innerHTML = `
+                <div class="absolute -right-10 -bottom-10 w-40 h-40 ${fam.glow} rounded-full blur-2xl transition-all duration-500"></div>
+
+                <div class="relative z-10">
+                    <div class="flex items-center justify-between mb-3 gap-2">
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            <span class="px-2.5 py-0.5 rounded-full text-[11px] font-semibold border ${badge.cls} capitalize flex items-center gap-1.5">
+                                <i class="fa-solid ${badge.icon} text-[10px]"></i> ${normType}
+                            </span>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800/80 text-sky-300 border border-slate-700 flex items-center gap-1" title="Աղբյուր՝ ${res.source}">
+                                <i class="fa-solid fa-globe text-[9px]"></i>Ինտերնետ
+                            </span>
                         </div>
+                        ${saveBtn}
                     </div>
-                    ${res.description ? `<p class="text-xs text-slate-500 mt-2 line-clamp-2 leading-relaxed">${res.description}</p>` : ''}
-                    <div class="mt-3 pt-3 border-t border-slate-100 flex items-center gap-2">
-                        <a href="${res.link}" target="_blank" rel="noopener noreferrer" onclick="return handleResourceLinkClick(event, '${String(res.link).replace(/'/g, "\\'")}')" class="flex-1 text-center px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all">
-                            <i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>Բացել
-                        </a>
-                        <button id="disc-add-${i}" onclick="addOnlineToLibrary(${i})" ${inLibrary ? 'disabled' : ''} class="flex-1 px-3 py-2 rounded-lg text-xs font-bold transition-all ${inLibrary ? 'bg-emerald-100 text-emerald-700 cursor-default' : 'bg-gradient-to-r from-gold-500 to-amber-600 hover:from-gold-400 hover:to-amber-500 text-white'}">
-                            <i class="fa-solid ${inLibrary ? 'fa-check' : 'fa-plus'} mr-1"></i>${inLibrary ? 'Ավելացված է' : 'Ավելացնել'}
-                        </button>
-                    </div>
-                `;
-                grid.appendChild(card);
-            });
+
+                    <h3 class="${isLarge ? 'text-xl sm:text-2xl' : 'text-base sm:text-lg'} font-serif font-bold text-slate-100 ${fam.title} transition-colors ${isLarge ? 'line-clamp-3' : 'line-clamp-2'}">
+                        ${res.title}
+                    </h3>
+
+                    <p class="text-xs text-slate-400 mt-1.5 flex items-center">
+                        <i class="fa-solid fa-user-pen ${fam.dot} mr-1.5 text-[10px]"></i>
+                        <span class="truncate">${res.authors || 'Անհայտ'}${res.year ? ' · ' + res.year : ''}</span>
+                    </p>
+
+                    ${res.description ? `<p class="text-xs text-slate-300/80 mt-3 ${descClamp} font-sans leading-relaxed border-l-2 ${fam.accentBar} pl-2.5 py-0.5">${res.description}</p>` : ''}
+                </div>
+
+                <div class="relative z-10 mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] gap-2">
+                    <span class="text-slate-500 truncate flex-1 min-w-0"><i class="fa-solid fa-globe ${fam.dot} mr-1"></i>${res.source}</span>
+                    <a href="${res.link}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation(); return handleResourceLinkClick(event, '${safeLink}')" class="shrink-0 px-2.5 py-1 rounded-lg ${fam.link} border font-semibold transition-all inline-flex items-center space-x-1">
+                        <span>Հղում</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+                    </a>
+                </div>
+            `;
+            return card;
         }
 
         function markOnlineAdded(index) {
-            const btn = document.getElementById('disc-add-' + index);
-            if (btn) {
-                btn.disabled = true;
-                btn.className = 'flex-1 px-3 py-2 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-700 cursor-default';
-                btn.innerHTML = '<i class="fa-solid fa-check mr-1"></i>Ավելացված է';
+            const el = document.getElementById('online-save-' + index);
+            if (el) {
+                const holder = el.parentNode;
+                const span = document.createElement('span');
+                span.id = 'online-save-' + index;
+                span.className = 'text-emerald-400 p-1';
+                span.title = 'Պահպանված է';
+                span.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+                holder.replaceChild(span, el);
             }
         }
 
@@ -2466,9 +2496,9 @@
             updateStatsCounters();
             renderDomainsTab();
             updateBookmarksUI();
-            applyFilters();
+            applyFilters();          // reflect the new item in the library grid (online section is left intact)
             markOnlineAdded(index);
-            showToast('Ավելացվեց ձեր գրադարանում ✓');
+            showToast('Պահպանվեց ձեր գրադարանում ✓');
         }
 
         /* ============================================================
