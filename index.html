@@ -239,9 +239,13 @@
                     <i class="fa-solid fa-shapes"></i>
                     <span>Ոլորտներ</span>
                 </button>
+                <button id="tab-discover" onclick="switchTab('discover')" class="flex items-center space-x-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50">
+                    <i class="fa-solid fa-globe"></i>
+                    <span>Առցանց Որոնում</span>
+                </button>
             </div>
 
-            <div class="text-xs text-slate-400 flex items-center space-x-2">
+            <div id="found-badge-wrap" class="text-xs text-slate-400 flex items-center space-x-2">
                 <span>Գտնված է՝</span>
                 <span id="filtered-count-badge" class="px-2.5 py-1 rounded-md bg-gold-500/20 text-gold-300 font-bold">0 նյութ</span>
             </div>
@@ -271,6 +275,7 @@
                         <option value="գիրք">Գիրք / Դասագիրք</option>
                         <option value="նյութ">Ուսումնական նյութ</option>
                         <option value="տեսանյութ">Տեսանյութ / Տեսադաս</option>
+                        <option value="հոդված">Հոդված / Article</option>
                     </select>
                 </div>
 
@@ -322,6 +327,65 @@
             <div id="domains-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         </div>
 
+        <!-- VIEW 3: Online Discover (LIGHT themed) -->
+        <div id="view-discover-container" class="hidden">
+            <div class="rounded-3xl bg-[#faf7ef] text-slate-800 border border-amber-200 shadow-xl p-5 sm:p-7">
+
+                <!-- Header -->
+                <div class="flex items-start gap-3 mb-5">
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-gold-400 to-amber-600 flex items-center justify-center text-white text-xl shadow-md shrink-0">
+                        <i class="fa-solid fa-earth-europe"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl sm:text-2xl font-serif font-bold text-slate-900">Առցանց Ակադեմիական Որոնում</h3>
+                        <p class="text-sm text-slate-500 mt-0.5">Գտեք գրքեր, դասագրքեր և գիտական հոդվածներ ամբողջ ինտերնետից՝ ըստ ձեր ոլորտների, և ավելացրեք ուղիղ ձեր գրադարանում։</p>
+                    </div>
+                </div>
+
+                <!-- Thematic quick picks -->
+                <div class="mb-4">
+                    <span class="text-[11px] uppercase tracking-wider text-slate-400 font-bold block mb-2">Թեմատիկ որոնում ըստ ոլորտի՝</span>
+                    <div id="discover-domain-chips" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- Search controls -->
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-3 mb-3">
+                    <div class="md:col-span-6 relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" id="discover-query" onkeydown="if(event.key==='Enter'){runDiscoverSearch();}" placeholder="Որոնել վերնագրով, հեղինակով, թեմայով (անգլերեն/ռուսերեն)..." class="w-full pl-11 pr-4 py-3 rounded-xl bg-white border border-slate-300 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-gold-500 focus:ring-1 focus:ring-gold-500 text-sm transition-all">
+                    </div>
+                    <div class="md:col-span-3">
+                        <select id="discover-source" class="w-full px-4 py-3 rounded-xl bg-white border border-slate-300 text-slate-700 text-sm focus:outline-none focus:border-gold-500 transition-all cursor-pointer">
+                            <option value="all">Բոլորը (Գրքեր + Հոդվածներ)</option>
+                            <option value="books">Միայն Գրքեր</option>
+                            <option value="articles">Միայն Հոդվածներ</option>
+                        </select>
+                    </div>
+                    <div class="md:col-span-3">
+                        <button onclick="runDiscoverSearch()" class="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-gold-500 to-amber-600 hover:from-gold-400 hover:to-amber-500 text-white font-bold text-sm shadow-md transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-magnifying-glass"></i><span>Որոնել</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- File-under domain -->
+                <div class="flex items-center gap-2 flex-wrap mb-5 text-xs text-slate-500">
+                    <i class="fa-solid fa-folder-tree text-gold-500"></i>
+                    <span>Ավելացնել ոլորտում՝</span>
+                    <select id="discover-file-domain" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 text-xs focus:outline-none focus:border-gold-500 cursor-pointer max-w-full"></select>
+                </div>
+
+                <!-- Status / results -->
+                <div id="discover-status" class="hidden text-sm text-center py-10"></div>
+                <div id="discover-results" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+                <p class="mt-6 text-[11px] text-slate-400 leading-relaxed border-t border-amber-200/70 pt-3">
+                    <i class="fa-solid fa-circle-info mr-1 text-gold-500"></i>
+                    Աղբյուրներ՝ <strong>Open Library</strong> և <strong>Google Books</strong> (գրքեր), <strong>Crossref</strong> (գիտական հոդվածներ)։ Բոլորը անվճար, բաց հասանելիությամբ ակադեմիական բազաներ են։
+                </p>
+            </div>
+        </div>
+
     </main>
 
     <!-- Footer -->
@@ -360,12 +424,14 @@
 
             <!-- Modal Body -->
             <div class="p-6 overflow-y-auto space-y-6 flex-grow">
-                <div>
-                    <h2 id="modal-item-title" class="text-2xl font-serif font-bold text-slate-100"></h2>
+                <div class="flex gap-4">
+                    <img id="modal-item-cover" alt="" class="hidden w-24 h-36 object-cover rounded-lg border border-slate-700 shrink-0 bg-slate-800">
+                    <div class="flex-1 min-w-0"><h2 id="modal-item-title" class="text-2xl font-serif font-bold text-slate-100"></h2>
                     <div class="flex flex-wrap items-center gap-4 mt-2 text-xs text-slate-400">
                         <span><i class="fa-solid fa-user-pen mr-1.5 text-amber-500"></i><strong id="modal-item-author" class="text-slate-200"></strong></span>
                         <span><i class="fa-solid fa-file-lines mr-1.5 text-amber-500"></i><span id="modal-item-pages"></span></span>
                         <span><i class="fa-solid fa-star mr-1.5 text-yellow-500"></i><span id="modal-item-rating"></span></span>
+                    </div>
                     </div>
                 </div>
 
@@ -463,6 +529,7 @@
                             <option value="գիրք">Գիրք / Դասագիրք</option>
                             <option value="նյութ">Ուսումնական նյութ</option>
                             <option value="տեսանյութ">Տեսանյութ / Տեսադաս</option>
+                            <option value="հոդված">Հոդված / Article</option>
                         </select>
                     </div>
                 </div>
@@ -763,6 +830,7 @@
         function normalizeType(raw) {
             const v = String(raw || '').trim().toLowerCase();
             if (v.includes('տեսանյութ') || v.includes('տեսադաս') || v.includes('video') || v.includes('vid')) return 'տեսանյութ';
+            if (v.includes('հոդված') || v.includes('article') || v.includes('journal') || v.includes('paper')) return 'հոդված';
             if (v.includes('նյութ') || v.includes('material') || v.includes('note')) return 'նյութ';
             if (v.includes('գիրք') || v.includes('book')) return 'գիրք';
             return 'գիրք';
@@ -1732,6 +1800,9 @@
                 } else if (normType === 'տեսանյութ') {
                     badgeIcon = 'fa-video';
                     badgeClass = 'bg-red-500/10 text-red-400 border-red-500/20';
+                } else if (normType === 'հոդված') {
+                    badgeIcon = 'fa-newspaper';
+                    badgeClass = 'bg-sky-500/10 text-sky-400 border-sky-500/20';
                 }
 
                 const card = document.createElement('div');
@@ -1810,10 +1881,12 @@
                 const nBooks = domItems.filter(m => m.type === 'գիրք').length;
                 const nMats = domItems.filter(m => m.type === 'նյութ').length;
                 const nVids = domItems.filter(m => m.type === 'տեսանյութ').length;
+                const nArts = domItems.filter(m => m.type === 'հոդված').length;
                 const breakdown = [
                     nBooks ? `<span class="inline-flex items-center gap-1"><i class="fa-solid fa-book text-emerald-400 text-[10px]"></i>${nBooks}</span>` : '',
                     nMats ? `<span class="inline-flex items-center gap-1"><i class="fa-solid fa-file-lines text-amber-400 text-[10px]"></i>${nMats}</span>` : '',
-                    nVids ? `<span class="inline-flex items-center gap-1"><i class="fa-solid fa-video text-red-400 text-[10px]"></i>${nVids}</span>` : ''
+                    nVids ? `<span class="inline-flex items-center gap-1"><i class="fa-solid fa-video text-red-400 text-[10px]"></i>${nVids}</span>` : '',
+                    nArts ? `<span class="inline-flex items-center gap-1"><i class="fa-solid fa-newspaper text-sky-400 text-[10px]"></i>${nArts}</span>` : ''
                 ].filter(Boolean).join('<span class="text-slate-700 mx-0.5">·</span>');
 
                 const card = document.createElement('div');
@@ -1854,27 +1927,27 @@
 
         function switchTab(tabName) {
             activeTab = tabName;
-            const btnMaterials = document.getElementById('tab-materials');
-            const btnDomains = document.getElementById('tab-domains');
-            const viewMaterials = document.getElementById('view-materials-container');
-            const viewDomains = document.getElementById('view-domains-container');
+            const ACTIVE = "flex items-center space-x-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all bg-gold-600 text-slate-950 shadow-md";
+            const IDLE = "flex items-center space-x-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50";
+
+            const tabs = { materials: 'tab-materials', domains: 'tab-domains', discover: 'tab-discover' };
+            const views = { materials: 'view-materials-container', domains: 'view-domains-container', discover: 'view-discover-container' };
+
+            Object.keys(tabs).forEach(name => {
+                const btn = document.getElementById(tabs[name]);
+                if (btn) btn.className = (name === tabName) ? ACTIVE : IDLE;
+                const view = document.getElementById(views[name]);
+                if (view) view.classList.toggle('hidden', name !== tabName);
+            });
+
+            // The search/filter bar and the "found" badge belong to the Materials view only
             const filterControls = document.getElementById('filter-controls-container');
+            if (filterControls) filterControls.classList.toggle('hidden', tabName !== 'materials');
+            const foundBadge = document.getElementById('found-badge-wrap');
+            if (foundBadge) foundBadge.classList.toggle('hidden', tabName !== 'materials');
 
-            if (tabName === 'materials') {
-                btnMaterials.className = "flex items-center space-x-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all bg-gold-600 text-slate-950 shadow-md";
-                btnDomains.className = "flex items-center space-x-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50";
-                
-                viewMaterials.classList.remove('hidden');
-                viewDomains.classList.add('hidden');
-                filterControls.classList.remove('hidden');
-            } else {
-                btnDomains.className = "flex items-center space-x-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all bg-gold-600 text-slate-950 shadow-md";
-                btnMaterials.className = "flex items-center space-x-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-800/50";
-
-                viewDomains.classList.remove('hidden');
-                viewMaterials.classList.add('hidden');
-                filterControls.classList.add('hidden');
-            }
+            // Lazily build the Discover controls the first time the tab is opened
+            if (tabName === 'discover') initDiscover();
         }
 
         function filterByDomainFromCard(domainTitle) {
@@ -1907,6 +1980,18 @@
             document.getElementById('modal-item-domain-badge').textContent = item.domain;
             document.getElementById('modal-item-description').textContent = item.description;
             document.getElementById('modal-item-id').textContent = item.id;
+
+            const coverImg = document.getElementById('modal-item-cover');
+            if (coverImg) {
+                if (item.cover) {
+                    coverImg.src = item.cover;
+                    coverImg.classList.remove('hidden');
+                    coverImg.onerror = () => coverImg.classList.add('hidden');
+                } else {
+                    coverImg.classList.add('hidden');
+                    coverImg.removeAttribute('src');
+                }
+            }
 
             const linkBtn = document.getElementById('modal-open-link-btn');
             linkBtn.href = item.link || '#';
@@ -2141,6 +2226,274 @@
             renderDomainsTab();
             updateBookmarksUI();
             showToast('Ռեսուրսը ջնջվեց', 'warning');
+        }
+
+        /* ============================================================
+           ONLINE DISCOVER — search the open internet for books & papers
+           on the project's themes and import them into the library.
+           Sources (all free, keyless, browser/CORS-friendly):
+             • Open Library   (books)     openlibrary.org
+             • Google Books   (books)     googleapis.com/books
+             • Crossref       (articles)  api.crossref.org
+           ============================================================ */
+
+        // Thematic search queries per domain (English/Russian recall is far better online)
+        const DOMAIN_QUERY_MAP = {
+            'Վերլուծական Երկրաչափություն և Գծային Հանրահաշիվ': 'linear algebra analytic geometry',
+            'Մաթեմատիկական Անալիզ': 'mathematical analysis calculus',
+            'Միկրոտնտեսագիտություն': 'microeconomics',
+            'Մակրոտնտեսագիտություն': 'macroeconomics',
+            'Մենեջմենթի հիմունքներ': 'principles of management',
+            'Արտադրության մենեջմենթ': 'operations and production management',
+            'Ծառայությունների ոլորտի կառավարում & Էկոնոմիկա': 'service management economics',
+            'Գործույթների հետազոտման մաթեմատիկական մեթոդներ': 'operations research linear programming',
+            'Ֆինանսներ': 'finance financial mathematics',
+            'Հոգեբանություն': 'psychology',
+            'Տեղեկատվական տեխնոլոգիաներ': 'information technology computer science',
+            'Համաշխարհային տնտեսություն & Պատմություն': 'world economy economic history'
+        };
+
+        let discoverResults = [];
+        let discoverInited = false;
+
+        function initDiscover() {
+            if (discoverInited) return;
+            discoverInited = true;
+
+            // Thematic quick-pick chips
+            const chips = document.getElementById('discover-domain-chips');
+            if (chips) {
+                chips.innerHTML = '';
+                DOMAINS_DATA.forEach(d => {
+                    const q = DOMAIN_QUERY_MAP[d.title] || d.title;
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'px-3 py-1.5 rounded-full text-xs font-medium bg-white border border-amber-200 text-slate-600 hover:bg-amber-50 hover:border-gold-400 hover:text-amber-700 transition-all inline-flex items-center gap-1.5';
+                    btn.innerHTML = `<i class="fa-solid ${d.icon} text-[10px] text-gold-500"></i>${d.title}`;
+                    btn.onclick = () => {
+                        document.getElementById('discover-query').value = q;
+                        const fd = document.getElementById('discover-file-domain');
+                        if (fd) fd.value = d.title;
+                        runDiscoverSearch();
+                    };
+                    chips.appendChild(btn);
+                });
+            }
+
+            // "File under" domain select
+            const fileSel = document.getElementById('discover-file-domain');
+            if (fileSel) {
+                fileSel.innerHTML = '';
+                DOMAINS_DATA.forEach(d => {
+                    const o = document.createElement('option');
+                    o.value = d.title; o.textContent = d.title;
+                    fileSel.appendChild(o);
+                });
+            }
+        }
+
+        function setDiscoverStatus(html, show = true) {
+            const box = document.getElementById('discover-status');
+            if (!box) return;
+            box.innerHTML = html;
+            box.classList.toggle('hidden', !show);
+        }
+
+        function stripTags(s) { return String(s || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim(); }
+        function httpsify(u) { return String(u || '').replace(/^http:\/\//i, 'https://'); }
+
+        async function fetchOpenLibrary(q) {
+            const url = `https://openlibrary.org/search.json?q=${encodeURIComponent(q)}&limit=12&fields=key,title,author_name,first_publish_year,cover_i,ia,subject`;
+            const r = await fetch(url);
+            if (!r.ok) throw new Error('Open Library');
+            const data = await r.json();
+            return (data.docs || []).map(d => ({
+                key: 'ol:' + d.key,
+                title: d.title || '(առանց վերնագրի)',
+                authors: (d.author_name || []).slice(0, 3).join(', ') || 'Անհայտ',
+                year: d.first_publish_year || '',
+                source: 'Open Library',
+                type: 'գիրք',
+                link: (d.ia && d.ia.length) ? ('https://archive.org/details/' + d.ia[0]) : ('https://openlibrary.org' + d.key),
+                cover: d.cover_i ? ('https://covers.openlibrary.org/b/id/' + d.cover_i + '-M.jpg') : '',
+                description: (d.subject || []).slice(0, 6).join(', ')
+            }));
+        }
+
+        async function fetchGoogleBooks(q) {
+            const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=12`;
+            const r = await fetch(url);
+            if (!r.ok) throw new Error('Google Books');
+            const data = await r.json();
+            return (data.items || []).map(it => {
+                const v = it.volumeInfo || {};
+                return {
+                    key: 'gb:' + it.id,
+                    title: v.title || '(առանց վերնագրի)',
+                    authors: (v.authors || []).slice(0, 3).join(', ') || 'Անհայտ',
+                    year: (v.publishedDate || '').slice(0, 4),
+                    source: 'Google Books',
+                    type: 'գիրք',
+                    link: v.canonicalVolumeLink || v.infoLink || v.previewLink || '#',
+                    cover: v.imageLinks ? httpsify(v.imageLinks.thumbnail || v.imageLinks.smallThumbnail) : '',
+                    description: stripTags(v.description) || (v.categories || []).join(', ')
+                };
+            });
+        }
+
+        async function fetchCrossref(q) {
+            const url = `https://api.crossref.org/works?query=${encodeURIComponent(q)}&rows=12&select=DOI,title,author,issued,container-title,abstract,URL,type`;
+            const r = await fetch(url);
+            if (!r.ok) throw new Error('Crossref');
+            const data = await r.json();
+            return ((data.message && data.message.items) || []).map(it => ({
+                key: 'cr:' + it.DOI,
+                title: (it.title && it.title[0]) || '(առանց վերնագրի)',
+                authors: (it.author ? it.author.slice(0, 3).map(a => [a.given, a.family].filter(Boolean).join(' ')).join(', ') : '') || 'Անհայտ',
+                year: (it.issued && it.issued['date-parts'] && it.issued['date-parts'][0] ? it.issued['date-parts'][0][0] : ''),
+                source: 'Crossref',
+                type: 'հոդված',
+                link: it.URL || ('https://doi.org/' + it.DOI),
+                cover: '',
+                description: ((it['container-title'] && it['container-title'][0]) ? it['container-title'][0] + '. ' : '') + stripTags(it.abstract).slice(0, 200)
+            }));
+        }
+
+        async function runDiscoverSearch() {
+            const queryInput = document.getElementById('discover-query');
+            const fileDomain = document.getElementById('discover-file-domain');
+            let q = queryInput.value.trim();
+            if (!q && fileDomain) q = DOMAIN_QUERY_MAP[fileDomain.value] || fileDomain.value;
+            if (!q) { setDiscoverStatus('<span class="text-slate-500">Մուտքագրեք որոնման բառ կամ ընտրեք ոլորտ։</span>'); return; }
+
+            const mode = document.getElementById('discover-source').value;
+            document.getElementById('discover-results').innerHTML = '';
+            setDiscoverStatus('<i class="fa-solid fa-spinner fa-spin text-gold-500 text-2xl"></i><div class="mt-2 text-slate-500">Որոնվում է ինտերնետում...</div>');
+
+            const jobs = [];
+            if (mode === 'all' || mode === 'books') { jobs.push(fetchOpenLibrary(q)); jobs.push(fetchGoogleBooks(q)); }
+            if (mode === 'all' || mode === 'articles') { jobs.push(fetchCrossref(q)); }
+
+            const settled = await Promise.allSettled(jobs);
+            let results = [];
+            let failures = 0;
+            settled.forEach(s => { if (s.status === 'fulfilled') results = results.concat(s.value); else failures++; });
+
+            // Interleave sources so the list isn't all one source, then keep titled results
+            results = results.filter(r => r.title && r.title !== '(առանց վերնագրի)');
+
+            if (results.length === 0) {
+                if (failures === settled.length) {
+                    setDiscoverStatus('<i class="fa-solid fa-triangle-exclamation text-amber-500 text-2xl"></i><div class="mt-2 text-slate-500">Չհաջողվեց կապ հաստատել աղբյուրների հետ։ Ստուգեք ինտերնետ կապը և փորձեք կրկին։</div>');
+                } else {
+                    setDiscoverStatus('<i class="fa-solid fa-magnifying-glass text-slate-400 text-2xl"></i><div class="mt-2 text-slate-500">Արդյունքներ չգտնվեցին։ Փորձեք այլ բառեր։</div>');
+                }
+                return;
+            }
+
+            setDiscoverStatus('', false);
+            discoverResults = results;
+            renderDiscoverResults(results);
+        }
+
+        function renderDiscoverResults(results) {
+            const grid = document.getElementById('discover-results');
+            grid.innerHTML = '';
+
+            const srcBadge = {
+                'Open Library': 'bg-amber-100 text-amber-700',
+                'Google Books': 'bg-blue-100 text-blue-700',
+                'Crossref': 'bg-emerald-100 text-emerald-700'
+            };
+
+            results.forEach((res, i) => {
+                const inLibrary = materialsData.some(m => m.id === webItemId(res));
+                const typeBadge = res.type === 'հոդված'
+                    ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-50 text-sky-700 border border-sky-200"><i class="fa-solid fa-newspaper mr-1"></i>Հոդված</span>'
+                    : '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"><i class="fa-solid fa-book mr-1"></i>Գիրք</span>';
+
+                const cover = res.cover
+                    ? `<img src="${res.cover}" alt="" loading="lazy" class="w-16 h-24 object-cover rounded-lg border border-slate-200 shrink-0 bg-slate-100" onerror="this.style.display='none'">`
+                    : `<div class="w-16 h-24 rounded-lg border border-slate-200 bg-gradient-to-br from-amber-50 to-slate-100 flex items-center justify-center text-gold-400 shrink-0"><i class="fa-solid ${res.type === 'հոդված' ? 'fa-newspaper' : 'fa-book'} text-xl"></i></div>`;
+
+                const card = document.createElement('div');
+                card.className = 'card-in bg-white border border-slate-200 rounded-2xl p-4 hover:border-gold-400 hover:shadow-md transition-all flex flex-col';
+                card.style.animationDelay = Math.min(i * 25, 300) + 'ms';
+                card.innerHTML = `
+                    <div class="flex gap-3">
+                        ${cover}
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-1.5 flex-wrap mb-1.5">
+                                ${typeBadge}
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold ${srcBadge[res.source] || 'bg-slate-100 text-slate-600'}">${res.source}</span>
+                                ${res.year ? `<span class="text-[10px] text-slate-400">${res.year}</span>` : ''}
+                            </div>
+                            <h4 class="text-sm font-serif font-bold text-slate-900 leading-snug line-clamp-2">${res.title}</h4>
+                            <p class="text-xs text-slate-500 mt-1 line-clamp-1"><i class="fa-solid fa-user-pen text-gold-500/80 mr-1 text-[10px]"></i>${res.authors}</p>
+                        </div>
+                    </div>
+                    ${res.description ? `<p class="text-xs text-slate-500 mt-2 line-clamp-2 leading-relaxed">${res.description}</p>` : ''}
+                    <div class="mt-3 pt-3 border-t border-slate-100 flex items-center gap-2">
+                        <a href="${res.link}" target="_blank" rel="noopener noreferrer" onclick="return handleResourceLinkClick(event, '${String(res.link).replace(/'/g, "\\'")}')" class="flex-1 text-center px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-all">
+                            <i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>Բացել
+                        </a>
+                        <button id="disc-add-${i}" onclick="addDiscoverToLibrary(${i})" ${inLibrary ? 'disabled' : ''} class="flex-1 px-3 py-2 rounded-lg text-xs font-bold transition-all ${inLibrary ? 'bg-emerald-100 text-emerald-700 cursor-default' : 'bg-gradient-to-r from-gold-500 to-amber-600 hover:from-gold-400 hover:to-amber-500 text-white'}">
+                            <i class="fa-solid ${inLibrary ? 'fa-check' : 'fa-plus'} mr-1"></i>${inLibrary ? 'Ավելացված է' : 'Ավելացնել'}
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function webItemId(res) {
+            return 'ALX-WEB-' + stableHash(String(res.link) + '|' + String(res.title));
+        }
+
+        function addDiscoverToLibrary(index) {
+            const res = discoverResults[index];
+            if (!res) return;
+
+            const id = webItemId(res);
+            if (materialsData.some(m => m.id === id)) { showToast('Արդեն ձեր գրադարանում է', 'info'); return; }
+
+            const fileDomain = document.getElementById('discover-file-domain');
+            const domain = (fileDomain && fileDomain.value) || 'Տեղեկատվական տեխնոլոգիաներ';
+
+            const item = {
+                id,
+                title: res.title,
+                author: res.authors || 'Անհայտ',
+                link: res.link || '#',
+                domain,
+                type: canonicalType({ link: res.link, type: res.type }),
+                rating: 5.0,
+                bentoSpan: getBentoSpanForId(id),
+                description: res.description || `${res.type === 'հոդված' ? 'Գիտական հոդված' : 'Գիրք'} ներմուծված ${res.source}-ից։`,
+                tags: [],
+                extra: { 'Աղբյուր': res.source, 'Տարի': res.year || '—' },
+                cover: res.cover || '',
+                userAdded: true,
+                fromWeb: true
+            };
+
+            userItems.unshift(item);
+            saveUserItems();
+            rebuildMaterials();
+            populateDomainDropdowns();
+            updateStatsCounters();
+            applyFilters();
+            renderDomainsTab();
+            updateBookmarksUI();
+
+            // Reflect the added state on the button
+            const btn = document.getElementById('disc-add-' + index);
+            if (btn) {
+                btn.disabled = true;
+                btn.className = 'flex-1 px-3 py-2 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-700 cursor-default';
+                btn.innerHTML = '<i class="fa-solid fa-check mr-1"></i>Ավելացված է';
+            }
+            showToast('Ավելացվեց ձեր գրադարանում ✓');
         }
     </script>
 </body>
