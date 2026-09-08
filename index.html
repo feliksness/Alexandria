@@ -1757,8 +1757,9 @@
 
             const empty = !items || items.length === 0;
             grid.classList.toggle('hidden', empty);
-            emptyState.classList.toggle('hidden', !empty);
-            emptyState.classList.toggle('flex', empty);
+            // Show nothing when there are no local matches (the "Ոչինչ չի գտնվել" state is not displayed)
+            emptyState.classList.add('hidden');
+            emptyState.classList.remove('flex');
 
             if (!empty) renderNextGridBatch();
             else document.getElementById('grid-loadmore').classList.add('hidden');
@@ -2410,7 +2411,7 @@
 
             const saveBtn = inLibrary
                 ? `<span id="online-save-${i}" class="text-emerald-400 p-1" title="Պահպանված է"><i class="fa-solid fa-circle-check"></i></span>`
-                : `<button id="online-save-${i}" onclick="addOnlineToLibrary(${i})" title="Պահպանել գրադարանում" class="text-slate-400 hover:text-gold-400 p-1 transition-colors"><i class="fa-solid fa-bookmark"></i></button>`;
+                : `<button id="online-save-${i}" onclick="addOnlineToLibrary(${i})" title="Պահպանել գրադարանում" class="text-slate-400 hover:text-gold-400 p-1 transition-colors"><i class="fa-solid fa-plus"></i></button>`;
 
             card.innerHTML = `
                 <div class="absolute -right-10 -bottom-10 w-40 h-40 ${fam.glow} rounded-full blur-2xl transition-all duration-500"></div>
