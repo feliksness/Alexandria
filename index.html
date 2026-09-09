@@ -644,9 +644,10 @@
         <!-- Quit button (works with mouse & touch) -->
         <button id="sg-quit" class="absolute top-2.5 right-3 z-10 px-3 py-1.5 rounded-lg bg-white/10 border border-white/25 text-white text-xs font-bold hover:bg-white/20" style="touch-action:manipulation">ESC ✕</button>
 
-        <!-- Touch controls: joystick (left) + fire (right) -->
-        <div id="sg-controls" class="absolute inset-x-0 bottom-0 pb-7 px-7 flex items-end justify-between pointer-events-none">
-            <div id="sg-joy" class="relative w-32 h-32 rounded-full bg-white/10 border border-white/25 pointer-events-auto" style="touch-action:none">
+        <!-- Touch controls: joystick (left) + fire (right). Lifted above the bottom edge and the
+             phone safe-area so nothing gets cut off on mobile. -->
+        <div id="sg-controls" class="absolute inset-x-0 bottom-0 px-6 flex items-end justify-between pointer-events-none" style="padding-bottom: calc(5rem + env(safe-area-inset-bottom));">
+            <div id="sg-joy" class="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-white/10 border border-white/25 pointer-events-auto" style="touch-action:none">
                 <div id="sg-knob" class="absolute w-14 h-14 rounded-full bg-sky-400/40 border-2 border-sky-200/60" style="left:50%;top:50%;transform:translate(-50%,-50%)"></div>
             </div>
             <button id="sg-fire" class="pointer-events-auto w-20 h-20 rounded-full bg-red-500/70 border-2 border-red-300/60 text-white font-extrabold tracking-wide active:bg-red-400/90 shadow-lg" style="touch-action:none">FIRE</button>
@@ -1815,12 +1816,18 @@
                 if (window.launchSpaceHunter) window.launchSpaceHunter();
                 return;
             }
-            // Secret code: typing #minecraft opens Classic Minecraft in a new tab
-            if (code === '#minecraft') {
+            // Secret codes that open a game/site in a new tab
+            const LINK_CODES = {
+                '#minecraft': 'https://classic.minecraft.net/',
+                '#sudocu': 'https://soodoku.com/',
+                '#xo': 'https://tmaiadev-tictactoe.netlify.app/',
+                '#ox': 'https://tmaiadev-tictactoe.netlify.app/'
+            };
+            if (LINK_CODES[code]) {
                 document.getElementById('search-input').value = '';
                 currentSearchQuery = '';
                 applyFilters();
-                window.open('https://classic.minecraft.net/', '_blank', 'noopener,noreferrer');
+                window.open(LINK_CODES[code], '_blank', 'noopener,noreferrer');
                 return;
             }
             clearTimeout(searchDebounceTimer);
@@ -3093,7 +3100,6 @@
             const knobEl = document.getElementById('sg-knob');
             const fireEl = document.getElementById('sg-fire');
             const quitEl = document.getElementById('sg-quit');
-            const JOY_MAX = 46;
             let joyPointer = null;
 
             function resetKnob() {
@@ -3104,12 +3110,14 @@
             function joyMove(clientX, clientY) {
                 const rect = joyEl.getBoundingClientRect();
                 const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+                // Keep the knob inside the base whatever its size (mobile vs desktop)
+                const maxR = Math.max(20, rect.width / 2 - (knobEl.offsetWidth / 2));
                 let dx = clientX - cx, dy = clientY - cy;
                 const dist = Math.hypot(dx, dy) || 1;
-                const cl = Math.min(dist, JOY_MAX);
+                const cl = Math.min(dist, maxR);
                 dx = dx / dist * cl; dy = dy / dist * cl;
                 knobEl.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-                SG.joy.x = dx / JOY_MAX; SG.joy.y = dy / JOY_MAX;
+                SG.joy.x = dx / maxR; SG.joy.y = dy / maxR;
             }
 
             if (joyEl) {
