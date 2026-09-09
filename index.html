@@ -633,13 +633,23 @@
     <div id="toast-container" class="fixed bottom-4 right-4 z-[60] flex flex-col gap-2 pointer-events-none"></div>
 
     <!-- 🕹️ Hidden mini-game: SPACE HUNTER (Konami code: ↑ ↑ ↓ ↓ ← → ← → B A Enter) -->
-    <div id="space-game" class="fixed inset-0 z-[100] bg-black hidden">
+    <div id="space-game" class="fixed inset-0 z-[100] bg-black hidden select-none">
         <canvas id="space-canvas" class="block w-full h-full"></canvas>
-        <div class="absolute top-3 left-0 right-0 flex items-center justify-between px-4 text-white font-mono text-xs sm:text-sm pointer-events-none select-none">
+        <div class="absolute top-3 left-0 right-0 flex items-center justify-between px-4 text-white font-mono text-xs sm:text-sm pointer-events-none">
             <span id="sg-score" class="text-emerald-300">SCORE 0</span>
             <span class="text-gold-300 font-bold tracking-widest">✦ SPACE HUNTER ✦</span>
-            <span class="text-slate-400 hidden sm:inline">← → move · SPACE fire · ESC quit</span>
-            <span class="text-slate-400 sm:hidden">ESC</span>
+            <span class="text-slate-400 hidden sm:inline">← → move · SPACE fire</span>
+        </div>
+
+        <!-- Quit button (works with mouse & touch) -->
+        <button id="sg-quit" class="absolute top-2.5 right-3 z-10 px-3 py-1.5 rounded-lg bg-white/10 border border-white/25 text-white text-xs font-bold hover:bg-white/20" style="touch-action:manipulation">ESC ✕</button>
+
+        <!-- Touch controls: joystick (left) + fire (right) -->
+        <div id="sg-controls" class="absolute inset-x-0 bottom-0 pb-7 px-7 flex items-end justify-between pointer-events-none">
+            <div id="sg-joy" class="relative w-32 h-32 rounded-full bg-white/10 border border-white/25 pointer-events-auto" style="touch-action:none">
+                <div id="sg-knob" class="absolute w-14 h-14 rounded-full bg-sky-400/40 border-2 border-sky-200/60" style="left:50%;top:50%;transform:translate(-50%,-50%)"></div>
+            </div>
+            <button id="sg-fire" class="pointer-events-auto w-20 h-20 rounded-full bg-red-500/70 border-2 border-red-300/60 text-white font-extrabold tracking-wide active:bg-red-400/90 shadow-lg" style="touch-action:none">FIRE</button>
         </div>
     </div>
 
@@ -833,11 +843,11 @@
            of how the type was typed in the source spreadsheet. */
         function normalizeType(raw) {
             const v = String(raw || '').trim().toLowerCase();
-            if (v.includes('տեսանյութ') || v.includes('տեսադաս') || v.includes('video') || v.includes('vid')) return 'տեսանյութ';
+            if (v.includes('տեսանյութ') || v.includes('տեսադաս') || v.includes('տեսա') || v.includes('video') || v.includes('vid') || v.includes('youtube')) return 'տեսանյութ';
             if (v.includes('հոդված') || v.includes('article') || v.includes('journal') || v.includes('paper')) return 'հոդված';
-            if (v.includes('նյութ') || v.includes('material') || v.includes('note')) return 'նյութ';
-            if (v.includes('գիրք') || v.includes('book')) return 'գիրք';
-            return 'գիրք';
+            if (v.includes('գիրք') || v.includes('դասագիրք') || v.includes('book') || v.includes('textbook')) return 'գիրք';
+            // Anything else (materials, lectures, notes, unknown/blank) is treated as «նյութ»
+            return 'նյութ';
         }
 
         /* True for any YouTube link (watch, playlist, youtu.be, shorts, embed, etc.) */
@@ -1772,6 +1782,15 @@
 
         let searchDebounceTimer = null;
         function handleSearchInput() {
+            const raw = document.getElementById('search-input').value;
+            // Secret code: typing #2F4R launches the hidden Space Hunter mini-game
+            if (raw.trim().toLowerCase() === '#2f4r') {
+                document.getElementById('search-input').value = '';
+                currentSearchQuery = '';
+                applyFilters();
+                if (window.launchSpaceHunter) window.launchSpaceHunter();
+                return;
+            }
             clearTimeout(searchDebounceTimer);
             searchDebounceTimer = setTimeout(() => {
                 currentSearchQuery = document.getElementById('search-input').value.trim().toLowerCase();
@@ -2742,24 +2761,12 @@
 
         /* ============================================================
            🕹️  EASTER EGG — "SPACE HUNTER"
-           Konami code (↑ ↑ ↓ ↓ ← → ← → B A Enter) launches a small
-           canvas space-shooter with procedural 16-bit chiptune music.
-           Press ESC to quit. Fully self-contained (no external assets).
+           Launched by typing  #2F4R  in the search bar. A canvas space-
+           shooter with procedural 16-bit chiptune music and on-screen
+           joystick + fire button for phones. Press ESC / ✕ to quit.
+           Fully self-contained (no external assets).
            ============================================================ */
         (function () {
-            const KONAMI = ['arrowup','arrowup','arrowdown','arrowdown','arrowleft','arrowright','arrowleft','arrowright','b','a','enter'];
-            let kpos = 0;
-
-            document.addEventListener('keydown', (e) => {
-                if (SG.running) return; // ignore konami tracking while playing
-                const k = e.key.toLowerCase();
-                if (k === KONAMI[kpos]) {
-                    kpos++;
-                    if (kpos === KONAMI.length) { kpos = 0; startSpaceGame(); }
-                } else {
-                    kpos = (k === KONAMI[0]) ? 1 : 0;
-                }
-            });
 
             /* ---------- 16-bit chiptune (Web Audio, procedural) ---------- */
             const Music = {
@@ -2831,8 +2838,9 @@
             /* ---------- Game state ---------- */
             const SG = { running: false, raf: null, keys: {}, canvas: null, ctx: null, W: 0, H: 0,
                 player: null, bullets: [], enemies: [], stars: [], score: 0, lives: 3, over: false,
-                lastShot: 0, spawnT: 0, tPrev: 0 };
+                lastShot: 0, spawnT: 0, tPrev: 0, joy: { x: 0, y: 0 }, firing: false };
             window.SG = SG;
+            window.launchSpaceHunter = startSpaceGame;   // called from the search-bar code #2F4R
 
             function resize() {
                 SG.W = SG.canvas.width = window.innerWidth;
@@ -2847,7 +2855,8 @@
                 wrap.classList.remove('hidden');
                 SG.running = true; SG.over = false;
                 SG.score = 0; SG.lives = 3; SG.bullets = []; SG.enemies = []; SG.keys = {};
-                SG.spawnT = 0; SG.lastShot = 0;
+                SG.spawnT = 0; SG.lastShot = 0; SG.joy = { x: 0, y: 0 }; SG.firing = false;
+                resetKnob();
                 resize();
                 SG.player = { x: SG.W / 2, y: SG.H - 80, w: 34, h: 30, speed: 460 };
                 SG.stars = Array.from({ length: 90 }, () => ({ x: Math.random() * SG.W, y: Math.random() * SG.H, s: Math.random() * 2 + 0.4, v: Math.random() * 40 + 20 }));
@@ -2904,15 +2913,21 @@
                 SG.stars.forEach(s => { s.y += s.v * dt; if (s.y > SG.H) { s.y = 0; s.x = Math.random() * SG.W; } });
                 if (SG.over) return;
 
-                if (SG.keys['arrowleft']) p.x -= p.speed * dt;
-                if (SG.keys['arrowright']) p.x += p.speed * dt;
-                if (SG.keys['arrowup']) p.y -= p.speed * dt;
-                if (SG.keys['arrowdown']) p.y += p.speed * dt;
+                // Movement — keyboard arrows AND the on-screen joystick combined
+                let mx = 0, my = 0;
+                if (SG.keys['arrowleft']) mx -= 1;
+                if (SG.keys['arrowright']) mx += 1;
+                if (SG.keys['arrowup']) my -= 1;
+                if (SG.keys['arrowdown']) my += 1;
+                mx += SG.joy.x; my += SG.joy.y;
+                mx = Math.max(-1, Math.min(1, mx)); my = Math.max(-1, Math.min(1, my));
+                p.x += mx * p.speed * dt;
+                p.y += my * p.speed * dt;
                 p.x = Math.max(p.w / 2, Math.min(SG.W - p.w / 2, p.x));
                 p.y = Math.max(SG.H * 0.4, Math.min(SG.H - 40, p.y));
 
-                // shooting
-                if (SG.keys[' '] && performance.now() - SG.lastShot > 180) {
+                // shooting — Space key OR the on-screen FIRE button
+                if ((SG.keys[' '] || SG.firing) && performance.now() - SG.lastShot > 180) {
                     SG.bullets.push({ x: p.x, y: p.y - p.h / 2 });
                     SG.lastShot = performance.now();
                 }
@@ -3019,6 +3034,48 @@
                 c.beginPath(); c.arc(en.r * 0.25, -2, en.r * 0.16, 0, 6.28); c.fill();
                 c.restore();
             }
+
+            /* ---------- On-screen touch controls (joystick + fire + quit) ---------- */
+            const joyEl = document.getElementById('sg-joy');
+            const knobEl = document.getElementById('sg-knob');
+            const fireEl = document.getElementById('sg-fire');
+            const quitEl = document.getElementById('sg-quit');
+            const JOY_MAX = 46;
+            let joyPointer = null;
+
+            function resetKnob() {
+                SG.joy.x = 0; SG.joy.y = 0;
+                if (knobEl) knobEl.style.transform = 'translate(-50%,-50%)';
+            }
+
+            function joyMove(clientX, clientY) {
+                const rect = joyEl.getBoundingClientRect();
+                const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+                let dx = clientX - cx, dy = clientY - cy;
+                const dist = Math.hypot(dx, dy) || 1;
+                const cl = Math.min(dist, JOY_MAX);
+                dx = dx / dist * cl; dy = dy / dist * cl;
+                knobEl.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+                SG.joy.x = dx / JOY_MAX; SG.joy.y = dy / JOY_MAX;
+            }
+
+            if (joyEl) {
+                joyEl.addEventListener('pointerdown', (e) => { joyPointer = e.pointerId; joyEl.setPointerCapture(e.pointerId); joyMove(e.clientX, e.clientY); e.preventDefault(); });
+                joyEl.addEventListener('pointermove', (e) => { if (joyPointer === e.pointerId) { joyMove(e.clientX, e.clientY); e.preventDefault(); } });
+                const endJoy = (e) => { if (joyPointer === e.pointerId) { joyPointer = null; resetKnob(); } };
+                joyEl.addEventListener('pointerup', endJoy);
+                joyEl.addEventListener('pointercancel', endJoy);
+                joyEl.addEventListener('pointerleave', endJoy);
+            }
+            if (fireEl) {
+                const fireDown = (e) => { e.preventDefault(); if (SG.over) { restart(); return; } SG.firing = true; };
+                const fireUp = (e) => { e.preventDefault(); SG.firing = false; };
+                fireEl.addEventListener('pointerdown', fireDown);
+                fireEl.addEventListener('pointerup', fireUp);
+                fireEl.addEventListener('pointercancel', fireUp);
+                fireEl.addEventListener('pointerleave', fireUp);
+            }
+            if (quitEl) quitEl.addEventListener('click', (e) => { e.preventDefault(); endSpaceGame(); });
         })();
     </script>
 </body>
