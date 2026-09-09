@@ -863,6 +863,28 @@
             return isYouTubeLink(item && item.link) ? 'տեսանյութ' : normalizeType(item && item.type);
         }
 
+        // Header names that mean "the format/type of the resource"
+        const FORMAT_KEYS = ['format', 'ֆորմատ', 'ձևաչափ', 'ձեւաչափ', 'տեսակ', 'type', 'տիպ'];
+
+        // Pull a format value out of an item's captured "extra" columns (e.g. a "Format" column
+        // that wasn't recognised as the type at import time).
+        function extraFormat(extra) {
+            if (!extra || typeof extra !== 'object') return '';
+            for (const k of Object.keys(extra)) {
+                if (FORMAT_KEYS.includes(String(k).trim().toLowerCase())) return extra[k];
+            }
+            return '';
+        }
+
+        // The authoritative display type for an item: YouTube → video; else an explicit Format
+        // column (even if it landed in "extra"); else the normalized type field.
+        function resolveType(item) {
+            if (isYouTubeLink(item && item.link)) return 'տեսանյութ';
+            const fmt = extraFormat(item && item.extra);
+            if (fmt) return normalizeType(fmt);
+            return normalizeType(item && item.type);
+        }
+
         /* Rich color-family system. Each domain maps to one of 8 families; every family carries a
            full set of literal Tailwind classes (so the Play CDN JIT picks them up from the DOM) that
            tint the card background, hover border, glow blob, title, footer link and accent dot —
@@ -1002,8 +1024,9 @@
                 }
                 if (!link) link = '#';
 
-                // Type: YouTube links are always videos; otherwise use the spreadsheet's type column
-                const type = canonicalType({ link, type: getField(normRow, ['Տեսակ', 'type', 'ձևաչափ', 'формат'], 'գիրք') });
+                // Type: YouTube links are always videos; otherwise use the spreadsheet's format/type
+                // column (many synonyms, incl. a plain "Format" header). Unknown/blank → «նյութ».
+                const type = canonicalType({ link, type: getField(normRow, ['Տեսակ', 'ձևաչափ', 'ձեւաչափ', 'ֆորմատ', 'տիպ', 'type', 'format', 'формат'], '') });
 
                 // Rating: read from the sheet if present, otherwise default to 5.0
                 let rating = parseFloat(String(getField(normRow, ['Վարկանիշ', 'Գնահատական', 'rating', 'rate', 'оценка'], '')).replace(',', '.'));
@@ -1013,7 +1036,7 @@
                 const tags = typeof tagsRaw === 'string' && tagsRaw ? tagsRaw.split(/[,;|]/).map(t => t.trim()).filter(Boolean) : [];
 
                 // Capture EVERY other column the spreadsheet provided, so no data is lost
-                const KNOWN_HEADERS = new Set(['վերնագիր','title','name','անվանում','հեղինակ','author','աղբյուր','հղում','link','url','ссылка','ոլորտ','domain','կատեգորիա','category','տեսակ','type','ձևաչափ','формат','նկարագրություն','description','описание','թեգեր','tags','թեգ','keywords','վարկանիշ','գնահատական','rating','rate','оценка']);
+                const KNOWN_HEADERS = new Set(['վերնագիր','title','name','անվանում','հեղինակ','author','աղբյուր','հղում','link','url','ссылка','ոլորտ','domain','կատեգորիա','category','տեսակ','type','ձևաչափ','ձեւաչափ','ֆորմատ','տիպ','format','формат','նկարագրություն','description','описание','թեգեր','tags','թեգ','keywords','վարկանիշ','գնահատական','rating','rate','оценка']);
                 const extra = {};
                 Object.keys(row).forEach(origKey => {
                     const nk = String(origKey).trim().toLowerCase();
@@ -1609,7 +1632,7 @@
         function rebuildMaterials() {
             const userIds = new Set(userItems.map(i => i.id));
             const merged = [...userItems, ...BASE_MATERIALS.filter(b => !userIds.has(b.id))];
-            materialsData = merged.map(m => ({ ...m, type: canonicalType(m) }));
+            materialsData = merged.map(m => ({ ...m, type: resolveType(m) }));
         }
 
         let userItems = loadUserItems();
@@ -1783,12 +1806,21 @@
         let searchDebounceTimer = null;
         function handleSearchInput() {
             const raw = document.getElementById('search-input').value;
+            const code = raw.trim().toLowerCase();
             // Secret code: typing #2F4R launches the hidden Space Hunter mini-game
-            if (raw.trim().toLowerCase() === '#2f4r') {
+            if (code === '#2f4r') {
                 document.getElementById('search-input').value = '';
                 currentSearchQuery = '';
                 applyFilters();
                 if (window.launchSpaceHunter) window.launchSpaceHunter();
+                return;
+            }
+            // Secret code: typing #minecraft opens Classic Minecraft in a new tab
+            if (code === '#minecraft') {
+                document.getElementById('search-input').value = '';
+                currentSearchQuery = '';
+                applyFilters();
+                window.open('https://classic.minecraft.net/', '_blank', 'noopener,noreferrer');
                 return;
             }
             clearTimeout(searchDebounceTimer);
@@ -2128,7 +2160,8 @@
             if (extraContainer) {
                 extraContainer.innerHTML = '';
                 const extra = item.extra && typeof item.extra === 'object' ? item.extra : {};
-                const keys = Object.keys(extra);
+                // Hide the format/type column here — it's already shown as the type badge above
+                const keys = Object.keys(extra).filter(k => !FORMAT_KEYS.includes(String(k).trim().toLowerCase()));
                 if (keys.length) {
                     if (extraWrap) extraWrap.classList.remove('hidden');
                     keys.forEach(k => {
@@ -2853,41 +2886,61 @@
                 SG.canvas = document.getElementById('space-canvas');
                 SG.ctx = SG.canvas.getContext('2d');
                 wrap.classList.remove('hidden');
-                SG.running = true; SG.over = false;
+                SG.running = true; SG.over = false; SG._ended = false;
                 SG.score = 0; SG.lives = 3; SG.bullets = []; SG.enemies = []; SG.keys = {};
                 SG.spawnT = 0; SG.lastShot = 0; SG.joy = { x: 0, y: 0 }; SG.firing = false;
+
+                // Take over the whole screen and lock everything else out while playing
+                if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+                SG.prevOverflow = document.body.style.overflow;
+                document.body.style.overflow = 'hidden';
+                SG.wantFS = true;
+                if (wrap.requestFullscreen) { wrap.requestFullscreen().catch(() => { SG.wantFS = false; }); }
+                else { SG.wantFS = false; }
+                wrap.focus && wrap.focus();
+
                 resetKnob();
                 resize();
                 SG.player = { x: SG.W / 2, y: SG.H - 80, w: 34, h: 30, speed: 460 };
                 SG.stars = Array.from({ length: 90 }, () => ({ x: Math.random() * SG.W, y: Math.random() * SG.H, s: Math.random() * 2 + 0.4, v: Math.random() * 40 + 20 }));
                 document.getElementById('sg-score').textContent = 'SCORE 0';
                 window.addEventListener('resize', resize);
-                document.addEventListener('keydown', onKeyDown, true);
-                document.addEventListener('keyup', onKeyUp, true);
+                // Listen on the capture phase and swallow every key so the page behind never reacts
+                window.addEventListener('keydown', onKeyDown, true);
+                window.addEventListener('keyup', onKeyUp, true);
                 Music.start();
                 SG.tPrev = performance.now();
                 SG.raf = requestAnimationFrame(loop);
             }
 
             function endSpaceGame() {
+                if (SG._ended) return;
+                SG._ended = true;
                 SG.running = false;
                 if (SG.raf) cancelAnimationFrame(SG.raf);
                 SG.raf = null;
                 window.removeEventListener('resize', resize);
-                document.removeEventListener('keydown', onKeyDown, true);
-                document.removeEventListener('keyup', onKeyUp, true);
+                window.removeEventListener('keydown', onKeyDown, true);
+                window.removeEventListener('keyup', onKeyUp, true);
                 Music.stop();
+                document.body.style.overflow = SG.prevOverflow || '';
+                SG.wantFS = false;
+                if (document.fullscreenElement) { try { document.exitFullscreen(); } catch (e) {} }
                 document.getElementById('space-game').classList.add('hidden');
             }
 
             function onKeyDown(e) {
+                // While the game is up, no key reaches the page behind it
+                e.preventDefault(); e.stopImmediatePropagation();
                 const k = e.key.toLowerCase();
-                if (k === 'escape') { e.preventDefault(); endSpaceGame(); return; }
-                if (['arrowleft','arrowright','arrowup','arrowdown',' ','spacebar'].includes(k)) e.preventDefault();
+                if (k === 'escape') { endSpaceGame(); return; }
                 if (SG.over && (k === 'enter' || k === ' ')) { restart(); return; }
                 SG.keys[k === 'spacebar' ? ' ' : k] = true;
             }
-            function onKeyUp(e) { SG.keys[e.key.toLowerCase() === 'spacebar' ? ' ' : e.key.toLowerCase()] = false; }
+            function onKeyUp(e) {
+                e.stopImmediatePropagation();
+                SG.keys[e.key.toLowerCase() === 'spacebar' ? ' ' : e.key.toLowerCase()] = false;
+            }
 
             function restart() {
                 SG.over = false; SG.score = 0; SG.lives = 3; SG.bullets = []; SG.enemies = [];
@@ -3076,6 +3129,11 @@
                 fireEl.addEventListener('pointerleave', fireUp);
             }
             if (quitEl) quitEl.addEventListener('click', (e) => { e.preventDefault(); endSpaceGame(); });
+
+            // Leaving fullscreen (e.g. the browser's Esc) also quits the game
+            document.addEventListener('fullscreenchange', () => {
+                if (SG.running && SG.wantFS && !document.fullscreenElement) endSpaceGame();
+            });
         })();
     </script>
 </body>
